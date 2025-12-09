@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coin Change Algorithm Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .code-line {
+            padding: 8px 16px;
+            margin: 2px 0;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .code-line.active {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+        }
+
+        .coin {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: #78350f;
+            font-weight: bold;
+            font-size: 18px;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+            border: 3px solid #fcd34d;
+        }
+
+        .dp-cell {
+            min-width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            background: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .dp-cell.highlight {
+            background: #dbeafe;
+            border-color: #3b82f6;
+            transform: scale(1.1);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .keyword { color: #8b5cf6; font-weight: 600; }
+        .function { color: #ec4899; font-weight: 600; }
+        .number { color: #10b981; }
+        .comment { color: #9ca3af; font-style: italic; }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="p-6">
+    <div class="max-w-7xl mx-auto">
+        <div class="glass-panel rounded-2xl p-6 mb-6">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Coin Change Problem Visualizer</h1>
+            <p class="text-gray-600 text-lg">Explore Dynamic Programming Approach</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="space-y-6">
+                <div class="glass-panel rounded-2xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Configuration</h2>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Target Amount</label>
+                        <input type="number" id="amountInput" value="11" min="1" max="50" 
+                               class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none text-lg font-semibold">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Coin Denominations (comma-separated)</label>
+                        <input type="text" id="coinsInput" value="1, 2, 5" 
+                               class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none text-lg font-semibold">
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button id="startBtn" class="control-btn flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+                            ▶ Start
+                        </button>
+                        <button id="resetBtn" class="control-btn flex-1 bg-gradient-to-r from-gray-500 to-gray-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all">
+                            ↻ Reset
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Playback Controls</h2>
+                    
+                    <div class="flex gap-3 mb-4">
+                        <button id="playBtn" class="control-btn flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold shadow-lg transition-all" disabled>
+                            ▶ Play
+                        </button>
+                        <button id="pauseBtn" class="control-btn flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-3 rounded-lg font-semibold shadow-lg transition-all" disabled>
+                            ⏸ Pause
+                        </button>
+                        <button id="stepBtn" class="control-btn flex-1 bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-lg font-semibold shadow-lg transition-all" disabled>
+                            ⏭ Step
+                        </button>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Speed: <span id="speedValue">1x</span></label>
+                        <input type="range" id="speedSlider" min="0.5" max="3" step="0.5" value="1" class="w-full">
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Algorithm Code</h2>
+                    <div id="codeDisplay" class="bg-gray-50 rounded-lg p-4 overflow-y-auto max-h-96 text-sm"></div>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Statistics</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <div class="text-sm text-gray-600 mb-1">Current Step</div>
+                            <div id="stepCount" class="text-3xl font-bold text-blue-600">0</div>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <div class="text-sm text-gray-600 mb-1">Time Complexity</div>
+                            <div id="timeComplexity" class="text-2xl font-bold text-purple-600">-</div>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <div class="text-sm text-gray-600 mb-1">Space Complexity</div>
+                            <div id="spaceComplexity" class="text-2xl font-bold text-green-600">-</div>
+                        </div>
+                        <div class="bg-orange-50 p-4 rounded-lg">
+                            <div class="text-sm text-gray-600 mb-1">Result</div>
+                            <div id="result" class="text-3xl font-bold text-orange-600">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="glass-panel rounded-2xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Current Step Explanation</h2>
+                    <div id="explanation" class="text-gray-700 text-lg leading-relaxed min-h-24">
+                        Configure the parameters and click "Start" to begin visualization.
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Visualization</h2>
+                    
+                    <div id="coinsDisplay" class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-3">Available Coins</h3>
+                        <div id="coinsContainer" class="flex gap-4 flex-wrap"></div>
+                    </div>
+
+                    <div id="visualizationContainer" class="bg-white rounded-lg p-6 min-h-96 overflow-auto">
+                        <div id="dpTable"></div>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Solution</h2>
+                    <div id="solutionDisplay" class="text-gray-700 text-lg">
+                        Solution will appear here after execution.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let state = {
+            amount: 11,
+            coins: [1, 2, 5],
+            steps: [],
+            currentStep: 0,
+            isPlaying: false,
+            speed: 1,
+            result: null
+        };
+
+        let animationInterval = null;
+
+        const codeTemplate = [
+            '<span class="keyword">function</span> <span class="function">coinChange</span>(coins, amount) {',
+            '    <span class="keyword">let</span> dp = <span class="keyword">new</span> Array(amount + <span class="number">1</span>).fill(Infinity);',
+            '    dp[<span class="number">0</span>] = <span class="number">0</span>; <span class="comment">// Base case</span>',
+            '    ',
+            '    <span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="number">1</span>; i <= amount; i++) {',
+            '        <span class="keyword">for</span> (<span class="keyword">let</span> coin <span class="keyword">of</span> coins) {',
+            '            <span class="keyword">if</span> (coin <= i) {',
+            '                dp[i] = Math.min(dp[i], dp[i - coin] + <span class="number">1</span>);',
+            '            }',
+            '        }',
+            '    }',
+            '    <span class="keyword">return</span> dp[amount] === Infinity ? <span class="number">-1</span> : dp[amount];',
+            '}'
+        ];
+
+        function generateSteps(coins, amount) {
+            const steps = [];
+            const dp = new Array(amount + 1).fill(Infinity);
+            dp[0] = 0;
+
+            steps.push({
+                line: 1,
+                explanation: `Initialize DP array of size ${amount + 1} with Infinity`,
+                dpState: [...dp],
+                highlight: []
+            });
+
+            steps.push({
+                line: 2,
+                explanation: `Base case: dp[0] = 0 (0 coins for amount 0)`,
+                dpState: [...dp],
+                highlight: [0]
+            });
+
+            for (let i = 1; i <= amount; i++) {
+                steps.push({
+                    line: 4,
+                    explanation: `Processing amount ${i}`,
+                    dpState: [...dp],
+                    highlight: [i],
+                    currentAmount: i
+                });
+
+                for (let coin of coins) {
+                    if (coin <= i) {
+                        const prev = dp[i];
+                        dp[i] = Math.min(dp[i], dp[i - coin] + 1);
+                        
+                        steps.push({
+                            line: 7,
+                            explanation: `Using coin ${coin}: dp[${i}] = min(${prev === Infinity ? '∞' : prev}, ${dp[i - coin] === Infinity ? '∞' : dp[i - coin]} + 1) = ${dp[i] === Infinity ? '∞' : dp[i]}`,
+                            dpState: [...dp],
+                            highlight: [i, i - coin],
+                            currentCoin: coin
+                        });
+                    }
+                }
+            }
+
+            steps.push({
+                line: 11,
+                explanation: `Result: ${dp[amount] === Infinity ? 'Impossible' : `${dp[amount]} coins`}`,
+                dpState: [...dp],
+                highlight: [amount],
+                result: dp[amount] === Infinity ? -1 : dp[amount]
+            });
+
+            return steps;
+        }
+
+        function displayCode() {
+            const code = codeTemplate.map((line, i) => 
+                `<div class="code-line" data-line="${i}">${line}</div>`
+            ).join('');
+            document.getElementById('codeDisplay').innerHTML = code;
+        }
+
+        function highlightLine(lineNum) {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+            if (lineNum >= 0) {
+                const line = document.querySelector(`[data-line="${lineNum}"]`);
+                if (line) line.classList.add('active');
+            }
+        }
+
+        function displayCoins() {
+            const html = state.coins.map(coin => 
+                `<div class="coin" data-coin="${coin}">${coin}</div>`
+            ).join('');
+            document.getElementById('coinsContainer').innerHTML = html;
+            
+            gsap.from('.coin', {
+                scale: 0,
+                rotation: 360,
+                duration: 0.5,
+                stagger: 0.1,
+                ease: 'back.out(1.7)'
+            });
+        }
+
+        function displayDPTable(dpState, highlights, currentCoin) {
+            const html = `
+                <div class="mb-4">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">DP Table</h3>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    ${dpState.map((val, i) => `
+                        <div class="text-center">
+                            <div class="text-xs text-gray-500 mb-1">i=${i}</div>
+                            <div class="dp-cell ${highlights.includes(i) ? 'highlight' : ''}" data-cell="${i}">
+                                ${val === Infinity ? '∞' : val}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            document.getElementById('dpTable').innerHTML = html;
+
+            if (highlights.length > 0) {
+                highlights.forEach(idx => {
+                    const cell = document.querySelector(`[data-cell="${idx}"]`);
+                    if (cell) {
+                        gsap.fromTo(cell, 
+                            { scale: 1 },
+                            { scale: 1.15, duration: 0.3, yoyo: true, repeat: 1 }
+                        );
+                    }
+                });
+            }
+
+            document.querySelectorAll('.coin').forEach(el => {
+                el.style.transform = 'scale(1)';
+            });
+
+            if (currentCoin) {
+                const coinEl = document.querySelector(`[data-coin="${currentCoin}"]`);
+                if (coinEl) {
+                    gsap.to(coinEl, { scale: 1.2, duration: 0.3 });
+                }
+            }
+        }
+
+        function executeStep(step) {
+            highlightLine(step.line);
+            document.getElementById('explanation').textContent = step.explanation;
+            displayDPTable(step.dpState, step.highlight || [], step.currentCoin);
+
+            if (step.result !== undefined) {
+                state.result = step.result;
+                document.getElementById('result').textContent = step.result === -1 ? 'N/A' : step.result;
+                
+                const solutionHTML = step.result !== -1 
+                    ? `<div class="bg-green-50 border-2 border-green-500 rounded-lg p-4">
+                        <div class="text-2xl font-bold text-green-700 mb-2">✓ Solution Found!</div>
+                        <div class="text-lg">Minimum coins: <span class="font-bold text-green-600">${step.result}</span></div>
+                       </div>`
+                    : `<div class="bg-red-50 border-2 border-red-500 rounded-lg p-4">
+                        <div class="text-2xl font-bold text-red-700 mb-2">✗ No Solution</div>
+                        <div class="text-lg">Cannot make exact change</div>
+                       </div>`;
+                document.getElementById('solutionDisplay').innerHTML = solutionHTML;
+            }
+        }
+
+        function runAnimation() {
+            if (state.isPlaying && state.currentStep < state.steps.length) {
+                executeStep(state.steps[state.currentStep]);
+                state.currentStep++;
+                document.getElementById('stepCount').textContent = state.currentStep;
+
+                if (state.currentStep >= state.steps.length) {
+                    stopPlaying();
+                }
+            }
+        }
+
+        function stopPlaying() {
+            state.isPlaying = false;
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            }
+            document.getElementById('playBtn').textContent = '▶ Play';
+        }
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            state.amount = parseInt(document.getElementById('amountInput').value);
+            state.coins = document.getElementById('coinsInput').value
+                .split(',')
+                .map(s => parseInt(s.trim()))
+                .filter(n => !isNaN(n) && n > 0);
+
+            if (state.coins.length === 0 || state.amount < 1) {
+                alert('Please enter valid coins and amount');
+                return;
+            }
+
+            state.steps = generateSteps(state.coins, state.amount);
+            state.currentStep = 0;
+
+            displayCode();
+            displayCoins();
+            
+            document.getElementById('timeComplexity').textContent = 'O(n·m)';
+            document.getElementById('spaceComplexity').textContent = 'O(n)';
+            document.getElementById('stepCount').textContent = '0';
+            document.getElementById('result').textContent = '-';
+            document.getElementById('solutionDisplay').textContent = 'Solution will appear after execution.';
+
+            document.getElementById('playBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = false;
+            document.getElementById('stepBtn').disabled = false;
+
+            document.getElementById('explanation').textContent = 'Ready! Click Play or Step to begin.';
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            stopPlaying();
+            state.currentStep = 0;
+            state.steps = [];
+            
+            document.getElementById('stepCount').textContent = '0';
+            document.getElementById('result').textContent = '-';
+            document.getElementById('timeComplexity').textContent = '-';
+            document.getElementById('spaceComplexity').textContent = '-';
+            document.getElementById('explanation').textContent = 'Configure parameters and click Start.';
+            document.getElementById('solutionDisplay').textContent = 'Solution will appear after execution.';
+            document.getElementById('dpTable').innerHTML = '';
+            document.getElementById('coinsContainer').innerHTML = '';
+            document.getElementById('codeDisplay').innerHTML = '';
+            
+            document.getElementById('playBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stepBtn').disabled = true;
+        });
+
+        document.getElementById('playBtn').addEventListener('click', () => {
+            if (state.currentStep >= state.steps.length) {
+                state.currentStep = 0;
+            }
+            
+            state.isPlaying = !state.isPlaying;
+            
+            if (state.isPlaying) {
+                document.getElementById('playBtn').textContent = '⏸ Playing';
+                animationInterval = setInterval(runAnimation, 1000 / state.speed);
+            } else {
+                stopPlaying();
+            }
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            stopPlaying();
+        });
+
+        document.getElementById('stepBtn').addEventListener('click', () => {
+            if (state.currentStep < state.steps.length) {
+                stopPlaying();
+                executeStep(state.steps[state.currentStep]);
+                state.currentStep++;
+                document.getElementById('stepCount').textContent = state.currentStep;
+            }
+        });
+
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            state.speed = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = `${state.speed}x`;
+            
+            if (state.isPlaying) {
+                clearInterval(animationInterval);
+                animationInterval = setInterval(runAnimation, 1000 / state.speed);
+            }
+        });
+
+        displayCode();
+    </script>
+</body>
+</html>
