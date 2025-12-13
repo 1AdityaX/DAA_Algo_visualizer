@@ -1,0 +1,649 @@
+<!-- Team Members:- Jeffrey Harris, Abishek Raj, Tridev Karthik, Vishaal -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kruskal's MST Algorithm Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <style>
+        /* Custom styles for visualization and syntax highlighting */
+        .pseudocode-line {
+            padding: 4px 8px;
+            border-left: 3px solid transparent;
+            transition: background-color 0.3s, border-left-color 0.3s;
+            font-family: 'Fira Code', 'Consolas', monospace;
+            cursor: pointer;
+        }
+
+        .pseudocode-line.highlight {
+            background-color: #fef3c7; /* yellow-100 */
+            border-left-color: #f59e0b; /* amber-500 */
+            font-weight: bold;
+        }
+
+        /* Styling for the graph/nodes */
+        .node {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            position: absolute;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.5s, transform 0.2s;
+            cursor: default;
+        }
+
+        /* Edge styling is handled primarily by SVG, but this is a fallback */
+        .edge {
+            stroke: #4b5563; /* gray-600 */
+            stroke-width: 2;
+            transition: stroke 0.5s, stroke-width 0.5s;
+        }
+
+        .edge-current {
+            stroke: #3b82f6; /* blue-500 */
+            stroke-width: 4;
+        }
+
+        .edge-mst {
+            stroke: #10b981; /* emerald-500 */
+            stroke-width: 4;
+            stroke-dasharray: 4;
+        }
+
+        /* Custom scrollbar for better visibility */
+        .scrollable-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .scrollable-content::-webkit-scrollbar-thumb {
+            background-color: #d1d5db; /* gray-300 */
+            border-radius: 4px;
+        }
+
+        .scrollable-content::-webkit-scrollbar-track {
+            background-color: #f3f4f6; /* gray-100 */
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800">
+
+    <div id="app" class="min-h-screen flex flex-col">
+        <header class="bg-indigo-700 text-white shadow-lg p-4">
+            <h1 class="text-3xl font-extrabold tracking-tight">Kruskal's MST Algorithm Visualizer</h1>
+            <p class="text-indigo-200 text-sm mt-1">An interactive exploration of the Minimum Spanning Tree algorithm.</p>
+        </header>
+
+        <main class="flex-grow flex p-4 space-x-4">
+            
+            <div class="w-1/3 flex flex-col space-y-4">
+                
+                <div class="bg-white p-4 rounded-lg shadow-xl border border-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-3 border-b pb-2">Controls & Info</h2>
+                    <div class="flex space-x-3 mb-4">
+                        <button id="playBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-200 flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                            Play
+                        </button>
+                        <button id="pauseBtn" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded transition duration-200 flex items-center" disabled>
+                            <svg class="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>
+                            Pause
+                        </button>
+                        <button id="stepBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-200 flex items-center" disabled>
+                            <svg class="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-3.707-8.707a1 1 0 000 1.414L9 14.414V7.586l-2.707 2.707a1 1 0 000-1.414zM10 9l3 3V8l-3 3z" clip-rule="evenodd"></path></svg>
+                            Step
+                        </button>
+                        <button id="resetBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition duration-200 flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 100 2h3a1 1 0 100-2h-3zM3 3a1 1 0 100 2h3a1 1 0 100-2H3zM11 15a1 1 0 100 2h3a1 1 0 100-2h-3zM3 15a1 1 0 100 2h3a1 1 0 100-2H3zM14 8h-4v4h4V8zM6 8H2v4h4V8zM14 2h-4v4h4V2zM6 2H2v4h4V2zM14 14h-4v4h4v-4zM6 14H2v4h4v-4z"></path></svg>
+                            Reset
+                        </button>
+                    </div>
+
+                    <div class="text-sm">
+                        <p class="mb-1"><strong class="text-gray-700">Step:</strong> <span id="stepCounter" class="font-mono text-lg text-indigo-600">0</span></p>
+                        <p class="mb-1"><strong class="text-gray-700">Time Complexity:</strong> <span class="font-mono text-sm">O(E log V)</span></p>
+                        <p class="mb-1"><strong class="text-gray-700">Space Complexity:</strong> <span class="font-mono text-sm">O(V + E)</span></p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg shadow-xl border border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-700 mb-3 border-b pb-2">Step Explanation</h3>
+                    <p id="stepExplanation" class="text-gray-600 scrollable-content h-32 overflow-y-auto">
+                        Click **Play** or **Step** to begin the visualization.
+                    </p>
+                </div>
+
+                <div class="bg-gray-800 text-gray-200 p-4 rounded-lg shadow-xl border border-gray-700 flex-grow">
+                    <h3 class="text-xl font-semibold text-indigo-400 mb-3 border-b border-indigo-500 pb-2">Pseudocode</h3>
+                    <div id="pseudocode" class="text-sm scrollable-content overflow-y-auto h-full max-h-[400px]">
+                        </div>
+                </div>
+            </div>
+
+            <div class="w-2/3 flex flex-col space-y-4">
+                
+                <div class="bg-white p-4 rounded-lg shadow-xl border border-gray-200 flex-grow relative h-[400px]">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-3 border-b pb-2">Graph Visualization</h2>
+                    <svg id="graphSvg" class="w-full h-full absolute top-0 left-0"></svg>
+                    <div id="nodesContainer" class="absolute inset-0 pointer-events-none">
+                        </div>
+                </div>
+
+                <div class="flex space-x-4 h-52">
+                    <div class="bg-white p-4 rounded-lg shadow-xl border border-gray-200 w-1/2 overflow-hidden flex flex-col">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-3 border-b pb-2">Sorted Edge List (E)</h3>
+                        <div id="edgeList" class="text-xs scrollable-content overflow-y-auto flex-grow font-mono">
+                            </div>
+                    </div>
+                    
+                    <div class="bg-white p-4 rounded-lg shadow-xl border border-gray-200 w-1/2 overflow-hidden flex flex-col">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-3 border-b pb-2">Disjoint Set (Union-Find)</h3>
+                        <div id="disjointSet" class="text-sm scrollable-content overflow-y-auto flex-grow">
+                            </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // =================================================================================
+        // Global State & Configuration
+        // =================================================================================
+        const STEP_DELAY = 1000; // Animation delay in milliseconds
+        const EDGE_NORMAL_COLOR = '#4b5563'; // gray-600
+        const EDGE_CURRENT_COLOR = '#3b82f6'; // blue-500
+        const EDGE_MST_COLOR = '#10b981'; // emerald-500
+        const NODE_NORMAL_COLOR = '#4f46e5'; // indigo-600
+        const NODE_HIGHLIGHT_COLOR = '#f59e0b'; // amber-500
+        
+        let animationQueue = [];
+        let isPlaying = false;
+        let stepIndex = 0;
+
+        // Sample Graph: Nodes (V) and Edges (E)
+        const initialGraph = {
+            nodes: ['A', 'B', 'C', 'D', 'E', 'F'],
+            edges: [
+                { u: 'A', v: 'B', weight: 7 },
+                { u: 'A', v: 'C', weight: 9 },
+                { u: 'A', v: 'F', weight: 14 },
+                { u: 'B', v: 'C', weight: 10 },
+                { u: 'B', v: 'D', weight: 15 },
+                { u: 'C', v: 'D', weight: 11 },
+                { u: 'C', v: 'F', weight: 2 },
+                { u: 'D', v: 'E', weight: 6 },
+                { u: 'E', v: 'F', weight: 9 },
+            ]
+        };
+
+        // Node coordinates for visualization (relative to a 100x100 grid)
+        const nodePositions = {
+            'A': { x: 10, y: 10 },
+            'B': { x: 30, y: 35 },
+            'C': { x: 50, y: 10 },
+            'D': { x: 70, y: 35 },
+            'E': { x: 90, y: 10 },
+            'F': { x: 50, y: 60 }
+        };
+
+        // Pseudocode lines with line numbers and explanations
+        const kruskalPseudocode = [
+            { line: 'function Kruskal(G):', code: true, explanation: 'Start Kruskal\'s Algorithm on Graph G.' }, // 0
+            { line: '  MST = []', code: true, explanation: 'Initialize the Minimum Spanning Tree (MST) list to be empty.' }, // 1
+            { line: '  Sort all edges of G by weight in non-decreasing order', code: true, explanation: 'Sort all edges in the graph by their weight. This is the core step for the Greedy approach.' }, // 2
+            { line: '  Initialize Disjoint Set (Union-Find) for all vertices', code: true, explanation: 'Create a Disjoint Set (Union-Find) structure where each vertex is in its own set (parent[v] = v).' }, // 3
+            { line: '  for each edge (u, v) in sorted edges:', code: true, explanation: 'Iterate through the sorted edges, starting with the lightest.' }, // 4
+            { line: '    if Find(u) != Find(v):', code: true, explanation: 'Check if the vertices u and v are already in the same set. If they are, adding this edge would create a cycle (skip it).' }, // 5
+            { line: '      Add (u, v) to MST', code: true, explanation: 'Since the edge does not form a cycle, it is safe to add it to the MST.' }, // 6
+            { line: '      Union(u, v)', code: true, explanation: 'Merge the sets of u and v, indicating they are now connected in the MST.' }, // 7
+            { line: '  return MST', code: true, explanation: 'Once all edges have been processed (or MST has V-1 edges), return the MST.' } // 8
+        ];
+
+        // =================================================================================
+        // DOM Elements
+        // =================================================================================
+        const els = {
+            stepCounter: document.getElementById('stepCounter'),
+            stepExplanation: document.getElementById('stepExplanation'),
+            pseudocodeContainer: document.getElementById('pseudocode'),
+            edgeListContainer: document.getElementById('edgeList'),
+            disjointSetContainer: document.getElementById('disjointSet'),
+            graphSvg: document.getElementById('graphSvg'),
+            nodesContainer: document.getElementById('nodesContainer'),
+            playBtn: document.getElementById('playBtn'),
+            pauseBtn: document.getElementById('pauseBtn'),
+            stepBtn: document.getElementById('stepBtn'),
+            resetBtn: document.getElementById('resetBtn'),
+        };
+
+        // =================================================================================
+        // Disjoint Set (Union-Find) Implementation
+        // =================================================================================
+        class DisjointSet {
+            constructor(elements) {
+                this.parent = {};
+                elements.forEach(el => this.parent[el] = el);
+            }
+
+            // Find with Path Compression
+            find(i) {
+                if (this.parent[i] === i) {
+                    return i;
+                }
+                this.parent[i] = this.find(this.parent[i]);
+                return this.parent[i];
+            }
+
+            // Union by Rank/Size (simplified to just merge)
+            union(i, j) {
+                const rootI = this.find(i);
+                const rootJ = this.find(j);
+
+                if (rootI !== rootJ) {
+                    this.parent[rootI] = rootJ;
+                    return true; // Union successful
+                }
+                return false; // Already in the same set
+            }
+            
+            // Get state for visualization
+            getState() {
+                return this.parent;
+            }
+        }
+
+        let ds = new DisjointSet(initialGraph.nodes);
+        let sortedEdges = [...initialGraph.edges].sort((a, b) => a.weight - b.weight);
+        let mst = [];
+
+        // =================================================================================
+        // Initialization and Rendering Functions
+        // =================================================================================
+        
+        /**
+         * Converts relative (0-100) coordinates to absolute pixel coordinates.
+         */
+        function getAbsPos(nodeName) {
+            const pos = nodePositions[nodeName];
+            const svgRect = els.graphSvg.getBoundingClientRect();
+            return {
+                x: (pos.x / 100) * svgRect.width,
+                y: (pos.y / 100) * svgRect.height,
+            };
+        }
+
+        /**
+         * Renders the initial graph nodes and edges.
+         */
+        function renderGraph() {
+            // Clear previous drawings
+            els.graphSvg.innerHTML = '';
+            els.nodesContainer.innerHTML = '';
+
+            // 1. Draw Edges (SVG Lines)
+            initialGraph.edges.forEach(edge => {
+                const posU = getAbsPos(edge.u);
+                const posV = getAbsPos(edge.v);
+                
+                // SVG Line Element
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', posU.x);
+                line.setAttribute('y1', posU.y);
+                line.setAttribute('x2', posV.x);
+                line.setAttribute('y2', posV.y);
+                line.setAttribute('id', `edge-${edge.u}-${edge.v}`);
+                line.classList.add('edge');
+                line.style.stroke = EDGE_NORMAL_COLOR;
+                els.graphSvg.appendChild(line);
+
+                // Edge Weight Text
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                const midX = (posU.x + posV.x) / 2;
+                const midY = (posU.y + posV.y) / 2;
+                text.setAttribute('x', midX);
+                text.setAttribute('y', midY - 5);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('font-size', '12');
+                text.setAttribute('fill', EDGE_NORMAL_COLOR);
+                text.setAttribute('id', `weight-${edge.u}-${edge.v}`);
+                text.textContent = edge.weight;
+                els.graphSvg.appendChild(text);
+            });
+
+            // 2. Draw Nodes (HTML Divs for better styling/interaction)
+            initialGraph.nodes.forEach(nodeName => {
+                const pos = getAbsPos(nodeName);
+                
+                const nodeEl = document.createElement('div');
+                nodeEl.id = `node-${nodeName}`;
+                nodeEl.classList.add('node', 'bg-indigo-600', 'pointer-events-auto');
+                nodeEl.style.left = `${pos.x - 15}px`; // Center the node (30px width/height)
+                nodeEl.style.top = `${pos.y - 15}px`;
+                nodeEl.textContent = nodeName;
+                
+                // Add a tooltip for Union-Find parent info
+                nodeEl.setAttribute('title', `Parent: ${ds.find(nodeName)}`);
+                
+                els.nodesContainer.appendChild(nodeEl);
+            });
+
+            // Call to refresh node positions on resize if needed (simplified for a fixed layout)
+            window.addEventListener('resize', renderGraph);
+        }
+
+        /**
+         * Renders the pseudocode in the dedicated panel.
+         */
+        function renderPseudocode() {
+            els.pseudocodeContainer.innerHTML = kruskalPseudocode.map((step, index) => 
+                `<div id="code-line-${index}" class="pseudocode-line ${step.code ? '' : 'text-gray-400 italic'}">
+                    <span class="mr-2 text-indigo-400">${index.toString().padStart(2, '0')}:</span>
+                    ${step.line}
+                </div>`
+            ).join('');
+        }
+        
+        /**
+         * Updates the Disjoint Set visualization in the status panel.
+         */
+        function updateDisjointSet() {
+            const parentMap = ds.getState();
+            let sets = {};
+            
+            // Group elements by their root (set)
+            initialGraph.nodes.forEach(node => {
+                const root = ds.find(node);
+                if (!sets[root]) {
+                    sets[root] = [];
+                }
+                sets[root].push(node);
+            });
+
+            const html = Object.keys(sets).map(root => `
+                <div class="mb-2 p-2 bg-indigo-50 border border-indigo-200 rounded-md">
+                    <strong class="text-indigo-700">Set (Root ${root}):</strong> ${sets[root].join(', ')}
+                </div>
+            `).join('');
+
+            els.disjointSetContainer.innerHTML = html || '<p class="text-gray-500 italic">Disjoint Set not yet initialized.</p>';
+        }
+
+        /**
+         * Updates the sorted edge list visualization.
+         */
+        function updateEdgeList(currentIndex = -1) {
+            const html = sortedEdges.map((edge, index) => {
+                let statusClass = '';
+                let statusText = '';
+                
+                const edgeKey = `${edge.u}-${edge.v}`;
+                const inMST = mst.some(e => (e.u === edge.u && e.v === edge.v) || (e.u === edge.v && e.v === edge.u));
+
+                if (inMST) {
+                    statusClass = 'bg-emerald-100 text-emerald-700 font-bold';
+                    statusText = ' (MST)';
+                } else if (index === currentIndex) {
+                    statusClass = 'bg-blue-100 text-blue-700 font-bold';
+                    statusText = ' (CURRENT)';
+                } else {
+                    statusClass = 'bg-gray-100 text-gray-700';
+                }
+
+                return `
+                    <div class="flex justify-between items-center py-1 px-2 mb-1 rounded ${statusClass}">
+                        <span>(${edge.u}, ${edge.v})</span>
+                        <span>Weight: ${edge.weight}</span>
+                        <span class="text-xs">${statusText}</span>
+                    </div>
+                `;
+            }).join('');
+            
+            els.edgeListContainer.innerHTML = html;
+
+            // Scroll to current edge
+            if (currentIndex !== -1) {
+                const currentEl = els.edgeListContainer.children[currentIndex];
+                if (currentEl) {
+                    currentEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+        }
+
+        // =================================================================================
+        // Algorithm Logic & Animation Timeline Builder
+        // =================================================================================
+
+        /**
+         * Kruskal's Algorithm simulator that generates a sequence of animation steps.
+         */
+        function buildAnimationQueue() {
+            const queue = [];
+            const V = initialGraph.nodes.length;
+            const E = sortedEdges.length;
+            let currentMSTCount = 0;
+            
+            // Utility to add a step to the queue
+            const addStep = (lineIndex, explanation, animationFunc) => {
+                queue.push({
+                    lineIndex: lineIndex,
+                    explanation: explanation,
+                    timeline: animationFunc // Function that returns a GSAP timeline
+                });
+            };
+
+            // 1. Initialization (Pseudocode lines 1-3)
+            addStep(1, kruskalPseudocode[1].explanation, () => 
+                gsap.timeline().add(() => mst = [])
+            );
+            addStep(2, kruskalPseudocode[2].explanation, () => 
+                gsap.timeline().add(() => updateEdgeList(-1))
+            );
+            addStep(3, kruskalPseudocode[3].explanation, () => {
+                ds = new DisjointSet(initialGraph.nodes); // Reset/Initialize DS
+                return gsap.timeline().add(() => updateDisjointSet());
+            });
+
+            // 2. Main Loop (Pseudocode lines 4-7)
+            for (let i = 0; i < E; i++) {
+                const edge = sortedEdges[i];
+                const edgeId = `#edge-${edge.u}-${edge.v}`;
+                const weightId = `#weight-${edge.u}-${edge.v}`;
+                const [u, v] = [edge.u, edge.v];
+                
+                // Check if we have found V-1 edges (optimization, not strictly needed for logic)
+                if (currentMSTCount === V - 1) break;
+                
+                // Line 4: Loop iteration
+                addStep(4, `Start processing edge (${u}, ${v}) with weight ${edge.weight}.`, () => 
+                    gsap.timeline()
+                        .to(edgeId, { stroke: EDGE_CURRENT_COLOR, strokeWidth: 4, duration: 0.3 })
+                        .to(weightId, { fill: EDGE_CURRENT_COLOR, duration: 0.3 }, "<")
+                        .add(() => updateEdgeList(i))
+                );
+
+                // Line 5: Find operation check (Cycle detection)
+                const isCycle = ds.find(u) === ds.find(v);
+                const explanation = isCycle 
+                    ? `Find(${u}) and Find(${v}) are the same (Root ${ds.find(u)}). Adding this edge would create a cycle. SKIP.`
+                    : `Find(${u}) and Find(${v}) are different (Roots ${ds.find(u)} and ${ds.find(v)}). Edge is safe to add. CONTINUE.`;
+                
+                addStep(5, explanation, () => 
+                    gsap.timeline()
+                        .to(`#node-${u}`, { backgroundColor: NODE_HIGHLIGHT_COLOR, duration: 0.3 })
+                        .to(`#node-${v}`, { backgroundColor: NODE_HIGHLIGHT_COLOR, duration: 0.3 }, "<")
+                );
+
+                if (isCycle) {
+                    // Cycle detected: Skip (No lines 6/7)
+                    addStep(5, explanation + " **Skipping lines 6 and 7.**", () => 
+                        gsap.timeline()
+                            .to(edgeId, { stroke: EDGE_NORMAL_COLOR, strokeWidth: 2, duration: 0.5 })
+                            .to(weightId, { fill: EDGE_NORMAL_COLOR, duration: 0.5 }, "<")
+                            .to(`#node-${u}`, { backgroundColor: NODE_NORMAL_COLOR, duration: 0.5 }, "<")
+                            .to(`#node-${v}`, { backgroundColor: NODE_NORMAL_COLOR, duration: 0.5 }, "<")
+                    );
+                } else {
+                    // Line 6: Add to MST
+                    addStep(6, kruskalPseudocode[6].explanation + ` Edge (${u}, ${v}) is added to MST.`, () => 
+                        gsap.timeline()
+                            .to(edgeId, { stroke: EDGE_MST_COLOR, strokeWidth: 4, duration: 0.5, strokeDasharray: 0 })
+                            .to(weightId, { fill: EDGE_MST_COLOR, duration: 0.5 }, "<")
+                            .add(() => {
+                                mst.push(edge);
+                                currentMSTCount++;
+                                updateEdgeList(i);
+                            })
+                    );
+                    
+                    // Line 7: Union operation
+                    addStep(7, kruskalPseudocode[7].explanation + ` Union(${u}, ${v}) is performed.`, () => {
+                        ds.union(u, v);
+                        const rootU = ds.find(u);
+                        const rootV = ds.find(v);
+                        
+                        return gsap.timeline()
+                            .add(() => updateDisjointSet())
+                            .to(`#node-${u}`, { backgroundColor: NODE_NORMAL_COLOR, duration: 0.5 })
+                            .to(`#node-${v}`, { backgroundColor: NODE_NORMAL_COLOR, duration: 0.5 }, "<");
+                    });
+                }
+            }
+
+            // 3. Final Step (Pseudocode line 8)
+            addStep(8, kruskalPseudocode[8].explanation + ` MST found with total weight: ${mst.reduce((sum, e) => sum + e.weight, 0)}.`, () => 
+                gsap.timeline()
+                    .add(() => {
+                        isPlaying = false;
+                        updateControls();
+                    })
+            );
+            
+            return queue;
+        }
+
+        // =================================================================================
+        // Execution Control Functions
+        // =================================================================================
+
+        /**
+         * Executes the next step in the animation queue.
+         */
+        function executeStep() {
+            if (stepIndex >= animationQueue.length) {
+                // Algorithm finished
+                isPlaying = false;
+                updateControls();
+                return;
+            }
+
+            const step = animationQueue[stepIndex];
+
+            // 1. Update UI (Step Counter, Explanation, Pseudocode Highlight)
+            els.stepCounter.textContent = stepIndex + 1;
+            els.stepExplanation.innerHTML = step.explanation;
+            
+            document.querySelectorAll('.pseudocode-line').forEach(el => el.classList.remove('highlight'));
+            const currentCodeLine = document.getElementById(`code-line-${step.lineIndex}`);
+            if (currentCodeLine) {
+                currentCodeLine.classList.add('highlight');
+                currentCodeLine.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            // 2. Execute Animation
+            const timeline = step.timeline();
+            
+            timeline.then(() => {
+                stepIndex++;
+                if (isPlaying) {
+                    // Continue playback after animation finishes
+                    setTimeout(executeStep, STEP_DELAY);
+                } else {
+                    // Stopped for manual step or pause
+                    updateControls();
+                }
+            });
+        }
+
+        /**
+         * Updates the state of the control buttons.
+         */
+        function updateControls() {
+            const finished = stepIndex >= animationQueue.length;
+
+            els.playBtn.disabled = isPlaying || finished;
+            els.pauseBtn.disabled = !isPlaying || finished;
+            els.stepBtn.disabled = isPlaying || finished;
+            els.resetBtn.disabled = isPlaying;
+            
+            // Update button texts/colors
+            els.playBtn.classList.toggle('bg-gray-400', els.playBtn.disabled);
+            els.playBtn.classList.toggle('bg-green-500', !els.playBtn.disabled);
+        }
+
+        /**
+         * Resets the entire visualization to the initial state.
+         */
+        function resetVisualization() {
+            isPlaying = false;
+            stepIndex = 0;
+            mst = [];
+            
+            ds = new DisjointSet(initialGraph.nodes); // Reset Disjoint Set
+            animationQueue = buildAnimationQueue(); // Re-build queue
+            
+            renderGraph(); // Re-render graph (clears visual state)
+            updateDisjointSet();
+            updateEdgeList(-1);
+            
+            els.stepCounter.textContent = '0';
+            els.stepExplanation.innerHTML = 'Click **Play** or **Step** to begin the visualization.';
+            document.querySelectorAll('.pseudocode-line').forEach(el => el.classList.remove('highlight'));
+            
+            updateControls();
+        }
+
+        // =================================================================================
+        // Event Listeners and Initialization
+        // =================================================================================
+
+        els.playBtn.addEventListener('click', () => {
+            if (stepIndex >= animationQueue.length) return;
+            isPlaying = true;
+            updateControls();
+            executeStep();
+        });
+
+        els.pauseBtn.addEventListener('click', () => {
+            isPlaying = false;
+            updateControls();
+        });
+
+        els.stepBtn.addEventListener('click', () => {
+            if (stepIndex >= animationQueue.length) return;
+            isPlaying = false;
+            updateControls();
+            executeStep();
+        });
+
+        els.resetBtn.addEventListener('click', resetVisualization);
+        
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPseudocode();
+            // Wait for initial DOM and styling to render before calculating positions
+            setTimeout(resetVisualization, 100); 
+        });
+
+        // Add visual hint for the graph type
+        els.stepExplanation.insertAdjacentHTML('afterend', '<p class="text-xs text-gray-400 mt-2">This visualization demonstrates Kruskal\'s algorithm on an undirected, weighted graph.</p>');
+    </script>
+</body>
+</html>
