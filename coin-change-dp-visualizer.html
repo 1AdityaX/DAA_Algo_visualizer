@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coin Change Algorithm Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        
+        .code-line {
+            transition: all 0.3s ease;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+        }
+        
+        .code-line.active {
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.05) 100%);
+            border-left: 3px solid #3b82f6;
+        }
+        
+        .dp-cell {
+            transition: all 0.3s ease;
+        }
+        
+        .coin-visual {
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .info-card {
+            transition: all 0.3s ease;
+        }
+        
+        .info-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tooltip {
+            position: relative;
+        }
+        
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.5rem 1rem;
+            background: #1f2937;
+            color: white;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            white-space: nowrap;
+            z-index: 1000;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 min-h-screen">
+    <div class="container mx-auto px-4 py-6">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="glass-effect rounded-2xl shadow-xl p-6">
+                <h1 class="text-4xl font-bold text-transparent bg-clip-text gradient-bg mb-2">
+                    Coin Change Algorithm Visualizer
+                </h1>
+                <p class="text-gray-600">Interactive Dynamic Programming Visualization</p>
+            </div>
+        </header>
+
+        <!-- Input Controls -->
+        <div class="glass-effect rounded-2xl shadow-xl p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Target Amount</label>
+                    <input type="number" id="targetAmount" value="11" min="1" max="100" 
+                           class="w-full px-4 py-2 border-2 border-purple-200 rounded-lg focus:outline-none focus:border-purple-500 transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Coins (comma-separated)</label>
+                    <input type="text" id="coinsInput" value="1,2,5" 
+                           class="w-full px-4 py-2 border-2 border-purple-200 rounded-lg focus:outline-none focus:border-purple-500 transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Animation Speed (ms)</label>
+                    <input type="range" id="speedControl" min="100" max="2000" value="800" step="100"
+                           class="w-full mt-3">
+                    <span id="speedDisplay" class="text-sm text-gray-600">800ms</span>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-3">
+                <button id="startBtn" class="btn-primary text-white px-6 py-3 rounded-lg font-semibold shadow-lg">
+                    ▶ Start Visualization
+                </button>
+                <button id="pauseBtn" class="btn-secondary px-6 py-3 rounded-lg font-semibold" disabled>
+                    ⏸ Pause
+                </button>
+                <button id="stepBtn" class="btn-secondary px-6 py-3 rounded-lg font-semibold" disabled>
+                    ⏭ Step
+                </button>
+                <button id="resetBtn" class="btn-secondary px-6 py-3 rounded-lg font-semibold">
+                    ↻ Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Left Panel: Code & Info -->
+            <div class="space-y-6">
+                <!-- Pseudocode -->
+                <div class="glass-effect rounded-2xl shadow-xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                        <span class="mr-2">📝</span> Pseudocode
+                    </h2>
+                    <div id="pseudocode" class="code-font text-sm space-y-1 bg-gray-50 p-4 rounded-lg overflow-x-auto">
+                        <div class="code-line" data-line="0">function coinChange(coins, amount):</div>
+                        <div class="code-line pl-4" data-line="1">dp = array of size (amount + 1)</div>
+                        <div class="code-line pl-4" data-line="2">fill dp with infinity</div>
+                        <div class="code-line pl-4" data-line="3">dp[0] = 0  // base case</div>
+                        <div class="code-line pl-4" data-line="4"></div>
+                        <div class="code-line pl-4" data-line="5">for i from 1 to amount:</div>
+                        <div class="code-line pl-8" data-line="6">for coin in coins:</div>
+                        <div class="code-line pl-12" data-line="7">if i >= coin:</div>
+                        <div class="code-line pl-16" data-line="8">dp[i] = min(dp[i], dp[i-coin] + 1)</div>
+                        <div class="code-line pl-4" data-line="9"></div>
+                        <div class="code-line pl-4" data-line="10">return dp[amount] if dp[amount] != infinity else -1</div>
+                    </div>
+                </div>
+
+                <!-- Complexity Analysis -->
+                <div class="glass-effect rounded-2xl shadow-xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                        <span class="mr-2">⚡</span> Complexity Analysis
+                    </h2>
+                    <div class="space-y-3">
+                        <div class="info-card bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
+                            <div class="font-semibold text-blue-900">Time Complexity</div>
+                            <div class="text-blue-700 code-font text-lg">O(amount × coins)</div>
+                            <div class="text-sm text-blue-600 mt-1">We iterate through each amount and each coin</div>
+                        </div>
+                        <div class="info-card bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg">
+                            <div class="font-semibold text-purple-900">Space Complexity</div>
+                            <div class="text-purple-700 code-font text-lg">O(amount)</div>
+                            <div class="text-sm text-purple-600 mt-1">We store the DP array of size amount + 1</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current Step Info -->
+                <div class="glass-effect rounded-2xl shadow-xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                        <span class="mr-2">💡</span> Current Step
+                    </h2>
+                    <div class="space-y-2">
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <span class="font-semibold text-gray-700">Step:</span>
+                            <span id="stepCounter" class="code-font text-lg text-purple-600 ml-2">0</span>
+                        </div>
+                        <div id="stepExplanation" class="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg text-gray-700 leading-relaxed">
+                            Click "Start Visualization" to begin the algorithm execution.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Visualization -->
+            <div class="space-y-6">
+                <!-- DP Table Visualization -->
+                <div class="glass-effect rounded-2xl shadow-xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                        <span class="mr-2">📊</span> DP Table Visualization
+                    </h2>
+                    <div id="dpTableContainer" class="overflow-x-auto">
+                        <div id="dpTable" class="inline-block min-w-full"></div>
+                    </div>
+                </div>
+
+                <!-- Coin Visualization -->
+                <div class="glass-effect rounded-2xl shadow-xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                        <span class="mr-2">🪙</span> Coin Selection Visualization
+                    </h2>
+                    <div id="coinVisualization" class="flex justify-center items-center min-h-[200px] flex-wrap gap-4">
+                        <!-- Coins will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Result Display -->
+                <div class="glass-effect rounded-2xl shadow-xl p-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                        <span class="mr-2">🎯</span> Result
+                    </h2>
+                    <div id="resultDisplay" class="text-center py-8">
+                        <div class="text-gray-500 text-lg">Result will appear here after execution</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state management
+        const state = {
+            coins: [1, 2, 5],
+            amount: 11,
+            dp: [],
+            currentStep: 0,
+            isRunning: false,
+            isPaused: false,
+            speed: 800,
+            currentI: 0,
+            currentCoin: 0,
+            currentLine: 0
+        };
+
+        // DOM elements
+        const elements = {
+            startBtn: document.getElementById('startBtn'),
+            pauseBtn: document.getElementById('pauseBtn'),
+            stepBtn: document.getElementById('stepBtn'),
+            resetBtn: document.getElementById('resetBtn'),
+            targetAmount: document.getElementById('targetAmount'),
+            coinsInput: document.getElementById('coinsInput'),
+            speedControl: document.getElementById('speedControl'),
+            speedDisplay: document.getElementById('speedDisplay'),
+            stepCounter: document.getElementById('stepCounter'),
+            stepExplanation: document.getElementById('stepExplanation'),
+            dpTable: document.getElementById('dpTable'),
+            coinVisualization: document.getElementById('coinVisualization'),
+            resultDisplay: document.getElementById('resultDisplay')
+        };
+
+        // Event listeners
+        elements.startBtn.addEventListener('click', startVisualization);
+        elements.pauseBtn.addEventListener('click', pauseVisualization);
+        elements.stepBtn.addEventListener('click', stepVisualization);
+        elements.resetBtn.addEventListener('click', resetVisualization);
+        elements.speedControl.addEventListener('input', (e) => {
+            state.speed = parseInt(e.target.value);
+            elements.speedDisplay.textContent = `${state.speed}ms`;
+        });
+
+        // Initialize the visualization
+        function initializeVisualization() {
+            state.coins = elements.coinsInput.value.split(',').map(x => parseInt(x.trim())).filter(x => x > 0);
+            state.amount = parseInt(elements.targetAmount.value);
+            
+            if (state.coins.length === 0 || state.amount <= 0) {
+                alert('Please enter valid coins and amount');
+                return false;
+            }
+            
+            state.dp = new Array(state.amount + 1).fill(Infinity);
+            state.dp[0] = 0;
+            state.currentStep = 0;
+            state.currentI = 1;
+            state.currentCoin = 0;
+            
+            renderDPTable();
+            renderCoins();
+            updateStepInfo('Initialized DP array. dp[0] = 0 (base case)', 3);
+            
+            return true;
+        }
+
+        // Render DP table
+        function renderDPTable() {
+            let html = '<div class="grid gap-2" style="grid-template-columns: repeat(' + (state.amount + 2) + ', minmax(60px, 1fr));">';
+            
+            // Header row
+            html += '<div class="font-bold text-center p-2 bg-gray-200 rounded">Index</div>';
+            for (let i = 0; i <= state.amount; i++) {
+                html += `<div class="font-bold text-center p-2 bg-gray-200 rounded">${i}</div>`;
+            }
+            
+            // Value row
+            html += '<div class="font-bold text-center p-2 bg-gray-200 rounded">Value</div>';
+            for (let i = 0; i <= state.amount; i++) {
+                const value = state.dp[i] === Infinity ? '∞' : state.dp[i];
+                const bgColor = state.dp[i] === Infinity ? 'bg-red-100' : 
+                               state.dp[i] === 0 ? 'bg-green-100' : 'bg-blue-100';
+                html += `<div class="dp-cell text-center p-2 ${bgColor} rounded font-semibold" id="dp-${i}">${value}</div>`;
+            }
+            
+            html += '</div>';
+            elements.dpTable.innerHTML = html;
+        }
+
+        // Update DP cell with animation
+        function updateDPCell(index, value) {
+            const cell = document.getElementById(`dp-${index}`);
+            if (!cell) return;
+            
+            const displayValue = value === Infinity ? '∞' : value;
+            
+            gsap.to(cell, {
+                scale: 1.3,
+                duration: 0.2,
+                onComplete: () => {
+                    cell.textContent = displayValue;
+                    cell.className = 'dp-cell text-center p-2 rounded font-semibold ' + 
+                                    (value === Infinity ? 'bg-red-100' : 
+                                     value === 0 ? 'bg-green-100' : 'bg-blue-100');
+                    gsap.to(cell, {
+                        scale: 1,
+                        duration: 0.2
+                    });
+                }
+            });
+        }
+
+        // Render coins
+        function renderCoins() {
+            let html = '';
+            state.coins.forEach((coin, idx) => {
+                html += `
+                    <div class="coin-visual flex flex-col items-center" id="coin-${idx}">
+                        <div class="w-20 h-20 rounded-full gradient-bg flex items-center justify-center text-white font-bold text-2xl shadow-lg">
+                            ${coin}
+                        </div>
+                        <div class="mt-2 text-sm font-semibold text-gray-600">Coin ${coin}</div>
+                    </div>
+                `;
+            });
+            elements.coinVisualization.innerHTML = html;
+        }
+
+        // Highlight coin
+        function highlightCoin(coinIndex) {
+            document.querySelectorAll('.coin-visual').forEach((coin, idx) => {
+                if (idx === coinIndex) {
+                    gsap.to(coin, {
+                        scale: 1.2,
+                        duration: 0.3
+                    });
+                } else {
+                    gsap.to(coin, {
+                        scale: 1,
+                        duration: 0.3
+                    });
+                }
+            });
+        }
+
+        // Update step information
+        function updateStepInfo(explanation, lineNumber) {
+            state.currentStep++;
+            elements.stepCounter.textContent = state.currentStep;
+            elements.stepExplanation.textContent = explanation;
+            
+            // Highlight code line
+            document.querySelectorAll('.code-line').forEach(line => {
+                line.classList.remove('active');
+            });
+            
+            if (lineNumber !== undefined) {
+                const line = document.querySelector(`[data-line="${lineNumber}"]`);
+                if (line) {
+                    line.classList.add('active');
+                    gsap.fromTo(line, 
+                        { x: -10, opacity: 0.5 },
+                        { x: 0, opacity: 1, duration: 0.3 }
+                    );
+                }
+            }
+        }
+
+        // Main algorithm execution
+        async function executeAlgorithm() {
+            state.isRunning = true;
+            
+            // Initialization phase
+            updateStepInfo(`Creating DP array of size ${state.amount + 1} and filling with infinity`, 1);
+            await sleep(state.speed);
+            
+            updateStepInfo('Setting dp[0] = 0 as base case (0 coins needed for amount 0)', 3);
+            await sleep(state.speed);
+            
+            // Main algorithm loop
+            for (state.currentI = 1; state.currentI <= state.amount; state.currentI++) {
+                if (!state.isRunning) return;
+                
+                updateStepInfo(`Processing amount ${state.currentI}`, 5);
+                highlightDPCell(state.currentI);
+                await sleep(state.speed);
+                
+                for (let coinIdx = 0; coinIdx < state.coins.length; coinIdx++) {
+                    if (!state.isRunning) return;
+                    
+                    const coin = state.coins[coinIdx];
+                    state.currentCoin = coinIdx;
+                    
+                    updateStepInfo(`Trying coin ${coin} for amount ${state.currentI}`, 6);
+                    highlightCoin(coinIdx);
+                    await sleep(state.speed);
+                    
+                    if (state.currentI >= coin) {
+                        updateStepInfo(`Amount ${state.currentI} >= coin ${coin}, checking if we can improve`, 7);
+                        await sleep(state.speed);
+                        
+                        const prevValue = state.dp[state.currentI - coin];
+                        const newValue = prevValue + 1;
+                        const currentValue = state.dp[state.currentI];
+                        
+                        if (prevValue !== Infinity && newValue < currentValue) {
+                            state.dp[state.currentI] = newValue;
+                            updateStepInfo(
+                                `Updated! dp[${state.currentI}] = min(${currentValue === Infinity ? '∞' : currentValue}, dp[${state.currentI - coin}] + 1) = ${newValue}`, 
+                                8
+                            );
+                            updateDPCell(state.currentI, newValue);
+                        } else {
+                            updateStepInfo(
+                                `No update. Current value ${currentValue === Infinity ? '∞' : currentValue} is better than ${newValue === Infinity ? '∞' : newValue}`, 
+                                8
+                            );
+                        }
+                        await sleep(state.speed);
+                    } else {
+                        updateStepInfo(`Amount ${state.currentI} < coin ${coin}, skipping this coin`, 7);
+                        await sleep(state.speed);
+                    }
+                }
+                
+                // Reset coin highlighting
+                document.querySelectorAll('.coin-visual').forEach(coin => {
+                    gsap.to(coin, { scale: 1, duration: 0.3 });
+                });
+            }
+            
+            // Display final result
+            const result = state.dp[state.amount];
+            updateStepInfo(
+                result === Infinity ? 
+                `Cannot make amount ${state.amount} with given coins` : 
+                `Minimum coins needed for amount ${state.amount} is ${result}`, 
+                10
+            );
+            
+            displayResult(result);
+            
+            state.isRunning = false;
+            elements.startBtn.disabled = false;
+            elements.pauseBtn.disabled = true;
+            elements.stepBtn.disabled = true;
+        }
+
+        // Highlight DP cell
+        function highlightDPCell(index) {
+            const cell = document.getElementById(`dp-${index}`);
+            if (!cell) return;
+            
+            gsap.fromTo(cell,
+                { boxShadow: '0 0 0 0 rgba(139, 92, 246, 0.7)' },
+                { 
+                    boxShadow: '0 0 0 8px rgba(139, 92, 246, 0)',
+                    duration: 0.6,
+                    ease: 'power2.out'
+                }
+            );
+        }
+
+        // Display final result
+        function displayResult(result) {
+            const isSuccess = result !== Infinity;
+            const html = `
+                <div class="result-animation">
+                    <div class="text-6xl mb-4">${isSuccess ? '✅' : '❌'}</div>
+                    <div class="text-3xl font-bold ${isSuccess ? 'text-green-600' : 'text-red-600'} mb-2">
+                        ${isSuccess ? result + ' Coins' : 'Not Possible'}
+                    </div>
+                    <div class="text-gray-600">
+                        ${isSuccess ? 
+                          `Minimum number of coins needed to make ${state.amount}` : 
+                          `Cannot make amount ${state.amount} with given coins`}
+                    </div>
+                </div>
+            `;
+            elements.resultDisplay.innerHTML = html;
+            
+            gsap.from('.result-animation', {
+                scale: 0,
+                opacity: 0,
+                duration: 0.5,
+                ease: 'back.out(1.7)'
+            });
+        }
+
+        // Control functions
+        function startVisualization() {
+            if (!initializeVisualization()) return;
+            
+            elements.startBtn.disabled = true;
+            elements.pauseBtn.disabled = false;
+            elements.stepBtn.disabled = true;
+            elements.resultDisplay.innerHTML = '<div class="text-gray-500">Computing...</div>';
+            
+            executeAlgorithm();
+        }
+
+        function pauseVisualization() {
+            state.isRunning = false;
+            elements.pauseBtn.disabled = true;
+            elements.stepBtn.disabled = false;
+            elements.startBtn.disabled = false;
+        }
+
+        function stepVisualization() {
+            // Step functionality would require refactoring the async flow
+            // For now, this is a placeholder
+            alert('Step-through mode: Continue with Start button for now');
+        }
+
+        function resetVisualization() {
+            state.isRunning = false;
+            state.isPaused = false;
+            state.currentStep = 0;
+            
+            elements.startBtn.disabled = false;
+            elements.pauseBtn.disabled = true;
+            elements.stepBtn.disabled = true;
+            
+            elements.stepCounter.textContent = '0';
+            elements.stepExplanation.textContent = 'Click "Start Visualization" to begin the algorithm execution.';
+            elements.resultDisplay.innerHTML = '<div class="text-gray-500 text-lg">Result will appear here after execution</div>';
+            
+            document.querySelectorAll('.code-line').forEach(line => {
+                line.classList.remove('active');
+            });
+            
+            initializeVisualization();
+        }
+
+        // Utility function
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initializeVisualization();
+            
+            gsap.from('.glass-effect', {
+                y: 30,
+                opacity: 0,
+                duration: 0.6,
+                stagger: 0.1,
+                ease: 'power2.out'
+            });
+        });
+    </script>
+</body>
+</html>
