@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bellman-Ford Algorithm Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .code-font {
+            font-family: 'Fira Code', monospace;
+        }
+        
+        .line-highlight {
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%);
+            border-left: 3px solid #3b82f6;
+        }
+        
+        .graph-node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .graph-node:hover {
+            transform: scale(1.1);
+        }
+        
+        .edge-line {
+            stroke-width: 2;
+            stroke: #64748b;
+            fill: none;
+        }
+        
+        .edge-weight {
+            font-size: 14px;
+            font-weight: 600;
+            fill: #1e293b;
+            pointer-events: none;
+        }
+        
+        .highlighted-edge {
+            stroke: #3b82f6;
+            stroke-width: 3;
+            animation: pulse-edge 1s ease-in-out;
+        }
+        
+        .relaxed-edge {
+            stroke: #10b981;
+            stroke-width: 3;
+        }
+        
+        .negative-cycle-edge {
+            stroke: #ef4444;
+            stroke-width: 3;
+            animation: pulse-negative 1s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-edge {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        @keyframes pulse-negative {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .control-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .control-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .control-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .complexity-badge {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 #f1f5f9;
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-md border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-800">Bellman-Ford Algorithm Visualizer</h1>
+                    <p class="text-sm text-slate-600 mt-1">Interactive shortest path algorithm demonstration</p>
+                </div>
+                <div class="flex gap-3">
+                    <div class="complexity-badge text-white px-4 py-2 rounded-lg shadow-lg">
+                        <div class="text-xs font-semibold">Time Complexity</div>
+                        <div class="text-lg font-bold code-font">O(V·E)</div>
+                    </div>
+                    <div class="complexity-badge text-white px-4 py-2 rounded-lg shadow-lg">
+                        <div class="text-xs font-semibold">Space Complexity</div>
+                        <div class="text-lg font-bold code-font">O(V)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-6 py-6">
+        <div class="grid grid-cols-12 gap-6">
+            <!-- Left Panel - Code & Controls -->
+            <div class="col-span-5 space-y-6">
+                <!-- Controls -->
+                <div class="bg-white rounded-xl shadow-lg p-6 border border-slate-200">
+                    <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                        </svg>
+                        Control Panel
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Graph Presets</label>
+                            <select id="graphPreset" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                                <option value="simple">Simple Graph (5 nodes)</option>
+                                <option value="negative">Graph with Negative Edges</option>
+                                <option value="cycle">Negative Cycle Detection</option>
+                                <option value="complex">Complex Graph (7 nodes)</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Source Node</label>
+                            <select id="sourceNode" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                                <option value="0">Node A (0)</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Animation Speed</label>
+                            <input type="range" id="speedSlider" min="100" max="2000" value="800" step="100" class="w-full">
+                            <div class="flex justify-between text-xs text-slate-600 mt-1">
+                                <span>Fast</span>
+                                <span id="speedLabel">800ms</span>
+                                <span>Slow</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-3 pt-2">
+                            <button id="startBtn" class="control-btn flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:from-blue-600 hover:to-blue-700">
+                                Start
+                            </button>
+                            <button id="pauseBtn" class="control-btn flex-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:from-amber-600 hover:to-amber-700" disabled>
+                                Pause
+                            </button>
+                            <button id="stepBtn" class="control-btn flex-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:from-purple-600 hover:to-purple-700">
+                                Step
+                            </button>
+                            <button id="resetBtn" class="control-btn flex-1 bg-gradient-to-r from-slate-500 to-slate-600 text-white px-6 py-3 rounded-lg font-semibold shadow-md hover:from-slate-600 hover:to-slate-700">
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="stats-card text-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold mb-4">Execution Statistics</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white bg-opacity-20 rounded-lg p-3 backdrop-blur-sm">
+                            <div class="text-sm opacity-90">Current Step</div>
+                            <div class="text-2xl font-bold code-font" id="stepCounter">0</div>
+                        </div>
+                        <div class="bg-white bg-opacity-20 rounded-lg p-3 backdrop-blur-sm">
+                            <div class="text-sm opacity-90">Relaxations</div>
+                            <div class="text-2xl font-bold code-font" id="relaxationCounter">0</div>
+                        </div>
+                        <div class="bg-white bg-opacity-20 rounded-lg p-3 backdrop-blur-sm">
+                            <div class="text-sm opacity-90">Current Iteration</div>
+                            <div class="text-2xl font-bold code-font" id="iterationCounter">0 / 0</div>
+                        </div>
+                        <div class="bg-white bg-opacity-20 rounded-lg p-3 backdrop-blur-sm">
+                            <div class="text-sm opacity-90">Status</div>
+                            <div class="text-lg font-bold" id="statusLabel">Ready</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pseudocode -->
+                <div class="bg-white rounded-xl shadow-lg p-6 border border-slate-200">
+                    <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                        </svg>
+                        Algorithm Pseudocode
+                    </h2>
+                    <div class="bg-slate-50 rounded-lg p-4 code-font text-sm max-h-96 overflow-y-auto border border-slate-200">
+                        <div id="pseudocode"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Visualization -->
+            <div class="col-span-7 space-y-6">
+                <!-- Graph Visualization -->
+                <div class="bg-white rounded-xl shadow-lg p-6 border border-slate-200">
+                    <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        Graph Visualization
+                    </h2>
+                    <svg id="graphCanvas" class="w-full border-2 border-slate-200 rounded-lg bg-slate-50" height="500"></svg>
+                </div>
+
+                <!-- Step Explanation -->
+                <div class="bg-white rounded-xl shadow-lg p-6 border border-slate-200">
+                    <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Current Step Explanation
+                    </h2>
+                    <div id="explanationText" class="text-slate-700 leading-relaxed min-h-[100px] bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        Click "Start" or "Step" to begin the algorithm visualization.
+                    </div>
+                </div>
+
+                <!-- Distance Table -->
+                <div class="bg-white rounded-xl shadow-lg p-6 border border-slate-200">
+                    <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                        Distance Table
+                    </h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-100 border-b-2 border-slate-300">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Node</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Distance</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Predecessor</th>
+                                </tr>
+                            </thead>
+                            <tbody id="distanceTable" class="divide-y divide-slate-200">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Legend -->
+    <div class="max-w-7xl mx-auto px-6 pb-6">
+        <div class="bg-white rounded-xl shadow-lg p-6 border border-slate-200">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">Legend</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-500 border-4 border-white shadow-md"></div>
+                    <span class="text-sm text-slate-700">Source Node</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-green-500 border-4 border-white shadow-md"></div>
+                    <span class="text-sm text-slate-700">Visited Node</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-amber-400 border-4 border-white shadow-md"></div>
+                    <span class="text-sm text-slate-700">Processing Node</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-slate-300 border-4 border-white shadow-md"></div>
+                    <span class="text-sm text-slate-700">Unvisited Node</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-16 h-1 bg-blue-500"></div>
+                    <span class="text-sm text-slate-700">Current Edge</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-16 h-1 bg-green-500"></div>
+                    <span class="text-sm text-slate-700">Relaxed Edge</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-16 h-1 bg-red-500"></div>
+                    <span class="text-sm text-slate-700">Negative Cycle</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-16 h-1 bg-slate-400"></div>
+                    <span class="text-sm text-slate-700">Normal Edge</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =============================================
+        // Constants and Configuration
+        // =============================================
+        const INF = Infinity;
+        const NODE_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+        
+        // Graph presets
+        const GRAPH_PRESETS = {
+            simple: {
+                nodes: 5,
+                edges: [
+                    {from: 0, to: 1, weight: 6},
+                    {from: 0, to: 2, weight: 7},
+                    {from: 1, to: 2, weight: 8},
+                    {from: 1, to: 3, weight: 5},
+                    {from: 1, to: 4, weight: -4},
+                    {from: 2, to: 3, weight: -3},
+                    {from: 2, to: 4, weight: 9},
+                    {from: 3, to: 1, weight: -2},
+                    {from: 4, to: 3, weight: 7}
+                ]
+            },
+            negative: {
+                nodes: 5,
+                edges: [
+                    {from: 0, to: 1, weight: 4},
+                    {from: 0, to: 2, weight: 5},
+                    {from: 1, to: 2, weight: -3},
+                    {from: 1, to: 3, weight: 8},
+                    {from: 2, to: 3, weight: 4},
+                    {from: 3, to: 4, weight: 2},
+                    {from: 4, to: 1, weight: -5}
+                ]
+            },
+            cycle: {
+                nodes: 4,
+                edges: [
+                    {from: 0, to: 1, weight: 1},
+                    {from: 1, to: 2, weight: -3},
+                    {from: 2, to: 3, weight: 2},
+                    {from: 3, to: 1, weight: 1}
+                ]
+            },
+            complex: {
+                nodes: 7,
+                edges: [
+                    {from: 0, to: 1, weight: 2},
+                    {from: 0, to: 2, weight: 6},
+                    {from: 1, to: 2, weight: 3},
+                    {from: 1, to: 3, weight: 5},
+                    {from: 2, to: 3, weight: -2},
+                    {from: 2, to: 4, weight: 4},
+                    {from: 3, to: 4, weight: 1},
+                    {from: 3, to: 5, weight: -1},
+                    {from: 4, to: 5, weight: 3},
+                    {from: 4, to: 6, weight: 2},
+                    {from: 5, to: 6, weight: 4}
+                ]
+            }
+        };
+
+        // Pseudocode for Bellman-Ford algorithm
+        const PSEUDOCODE = [
+            'function BellmanFord(graph, source):',
+            '    // Initialize distances',
+            '    for each vertex v in graph:',
+            '        distance[v] = ∞',
+            '        predecessor[v] = null',
+            '    distance[source] = 0',
+            '    ',
+            '    // Relax edges V-1 times',
+            '    for i = 1 to |V| - 1:',
+            '        for each edge (u, v) with weight w:',
+            '            if distance[u] + w < distance[v]:',
+            '                distance[v] = distance[u] + w',
+            '                predecessor[v] = u',
+            '    ',
+            '    // Check for negative cycles',
+            '    for each edge (u, v) with weight w:',
+            '        if distance[u] + w < distance[v]:',
+            '            return "Negative cycle detected"',
+            '    ',
+            '    return distance, predecessor'
+        ];
+
+        // =============================================
+        // State Management
+        // =============================================
+        class AlgorithmState {
+            constructor() {
+                this.graph = null;
+                this.source = 0;
+                this.distances = [];
+                this.predecessors = [];
+                this.steps = [];
+                this.currentStep = 0;
+                this.isRunning = false;
+                this.isPaused = false;
+                this.animationSpeed = 800;
+                this.stepCounter = 0;
+                this.relaxationCounter = 0;
+                this.currentIteration = 0;
+                this.totalIterations = 0;
+            }
+
+            reset() {
+                this.distances = [];
+                this.predecessors = [];
+                this.steps = [];
+                this.currentStep = 0;
+                this.isRunning = false;
+                this.isPaused = false;
+                this.stepCounter = 0;
+                this.relaxationCounter = 0;
+                this.currentIteration = 0;
+                this.totalIterations = 0;
+            }
+        }
+
+        const state = new AlgorithmState();
+
+        // =============================================
+        // Graph Visualization
+        // =============================================
+        class GraphVisualizer {
+            constructor(svgElement) {
+                this.svg = svgElement;
+                this.width = svgElement.clientWidth;
+                this.height = svgElement.clientHeight;
+                this.nodePositions = [];
+            }
+
+            calculateNodePositions(nodeCount) {
+                this.nodePositions = [];
+                const centerX = this.width / 2;
+                const centerY = this.height / 2;
+                const radius = Math.min(this.width, this.height) * 0.35;
+
+                for (let i = 0; i < nodeCount; i++) {
+                    const angle = (2 * Math.PI * i) / nodeCount - Math.PI / 2;
+                    this.nodePositions.push({
+                        x: centerX + radius * Math.cos(angle),
+                        y: centerY + radius * Math.sin(angle)
+                    });
+                }
+            }
+
+            drawGraph(graph) {
+                this.svg.innerHTML = '';
+                this.calculateNodePositions(graph.nodes);
+
+                // Create arrow marker
+                const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+                marker.setAttribute('id', 'arrowhead');
+                marker.setAttribute('markerWidth', '10');
+                marker.setAttribute('markerHeight', '10');
+                marker.setAttribute('refX', '9');
+                marker.setAttribute('refY', '3');
+                marker.setAttribute('orient', 'auto');
+                marker.setAttribute('markerUnits', 'strokeWidth');
+                
+                const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                polygon.setAttribute('points', '0 0, 10 3, 0 6');
+                polygon.setAttribute('fill', '#64748b');
+                marker.appendChild(polygon);
+                defs.appendChild(marker);
+                this.svg.appendChild(defs);
+
+                // Draw edges
+                graph.edges.forEach((edge, idx) => {
+                    this.drawEdge(edge, idx);
+                });
+
+                // Draw nodes
+                for (let i = 0; i < graph.nodes; i++) {
+                    this.drawNode(i);
+                }
+            }
+
+            drawEdge(edge, idx) {
+                const fromPos = this.nodePositions[edge.from];
+                const toPos = this.nodePositions[edge.to];
+
+                // Calculate arrow endpoint (stop before node circle)
+                const dx = toPos.x - fromPos.x;
+                const dy = toPos.y - fromPos.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                const unitX = dx / len;
+                const unitY = dy / len;
+                const nodeRadius = 30;
+                
+                const endX = toPos.x - unitX * nodeRadius;
+                const endY = toPos.y - unitY * nodeRadius;
+
+                // Edge line
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', fromPos.x);
+                line.setAttribute('y1', fromPos.y);
+                line.setAttribute('x2', endX);
+                line.setAttribute('y2', endY);
+                line.setAttribute('class', 'edge-line');
+                line.setAttribute('id', 'edge-' + idx);
+                line.setAttribute('marker-end', 'url(#arrowhead)');
+                this.svg.appendChild(line);
+
+                // Edge weight
+                const midX = (fromPos.x + toPos.x) / 2;
+                const midY = (fromPos.y + toPos.y) / 2;
+                
+                // Offset label perpendicular to edge
+                const offsetX = -unitY * 15;
+                const offsetY = unitX * 15;
+
+                const weightBg = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                weightBg.setAttribute('cx', midX + offsetX);
+                weightBg.setAttribute('cy', midY + offsetY);
+                weightBg.setAttribute('r', '16');
+                weightBg.setAttribute('fill', 'white');
+                weightBg.setAttribute('stroke', '#cbd5e1');
+                weightBg.setAttribute('stroke-width', '2');
+                this.svg.appendChild(weightBg);
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', midX + offsetX);
+                text.setAttribute('y', midY + offsetY);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'central');
+                text.setAttribute('class', 'edge-weight code-font');
+                text.setAttribute('id', 'weight-' + idx);
+                text.textContent = edge.weight;
+                this.svg.appendChild(text);
+            }
+
+            drawNode(nodeId) {
+                const pos = this.nodePositions[nodeId];
+                
+                // Node circle
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', pos.x);
+                circle.setAttribute('cy', pos.y);
+                circle.setAttribute('r', '30');
+                circle.setAttribute('fill', '#cbd5e1');
+                circle.setAttribute('stroke', 'white');
+                circle.setAttribute('stroke-width', '4');
+                circle.setAttribute('class', 'graph-node');
+                circle.setAttribute('id', 'node-' + nodeId);
+                circle.setAttribute('filter', 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))');
+                this.svg.appendChild(circle);
+
+                // Node label
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', pos.x);
+                text.setAttribute('y', pos.y);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'central');
+                text.setAttribute('font-size', '18');
+                text.setAttribute('font-weight', 'bold');
+                text.setAttribute('fill', '#1e293b');
+                text.setAttribute('pointer-events', 'none');
+                text.textContent = NODE_LABELS[nodeId];
+                this.svg.appendChild(text);
+            }
+
+            highlightNode(nodeId, color) {
+                const node = document.getElementById('node-' + nodeId);
+                if (node) {
+                    gsap.to(node, {
+                        attr: { fill: color },
+                        duration: 0.5,
+                        ease: 'power2.out'
+                    });
+                }
+            }
+
+            highlightEdge(edgeIdx, className) {
+                const edge = document.getElementById('edge-' + edgeIdx);
+                if (edge) {
+                    edge.classList.remove('highlighted-edge', 'relaxed-edge', 'negative-cycle-edge');
+                    edge.classList.add(className);
+                }
+            }
+
+            resetEdge(edgeIdx) {
+                const edge = document.getElementById('edge-' + edgeIdx);
+                if (edge) {
+                    edge.classList.remove('highlighted-edge', 'relaxed-edge', 'negative-cycle-edge');
+                }
+            }
+        }
+
+        // =============================================
+        // Bellman-Ford Algorithm Implementation
+        // =============================================
+        function generateBellmanFordSteps(graph, source) {
+            const steps = [];
+            const distances = new Array(graph.nodes).fill(INF);
+            const predecessors = new Array(graph.nodes).fill(null);
+            distances[source] = 0;
+
+            // Step 1: Initialization
+            steps.push({
+                type: 'init',
+                line: 2,
+                distances: [...distances],
+                predecessors: [...predecessors],
+                explanation: `Initializing: Set all distances to ∞ except source node ${NODE_LABELS[source]} which is set to 0.`,
+                highlightNode: source,
+                nodeColor: '#3b82f6'
+            });
+
+            // Step 2-3: Relax edges V-1 times
+            for (let i = 0; i < graph.nodes - 1; i++) {
+                steps.push({
+                    type: 'iteration-start',
+                    line: 8,
+                    iteration: i + 1,
+                    distances: [...distances],
+                    predecessors: [...predecessors],
+                    explanation: `Starting iteration ${i + 1} of ${graph.nodes - 1}. Checking all edges for possible relaxations.`
+                });
+
+                let relaxedInIteration = false;
+                
+                graph.edges.forEach((edge, edgeIdx) => {
+                    steps.push({
+                        type: 'check-edge',
+                        line: 10,
+                        edge: edge,
+                        edgeIdx: edgeIdx,
+                        distances: [...distances],
+                        predecessors: [...predecessors],
+                        explanation: `Checking edge ${NODE_LABELS[edge.from]} → ${NODE_LABELS[edge.to]} with weight ${edge.weight}. Current distances: ${NODE_LABELS[edge.from]}=${distances[edge.from] === INF ? '∞' : distances[edge.from]}, ${NODE_LABELS[edge.to]}=${distances[edge.to] === INF ? '∞' : distances[edge.to]}.`
+                    });
+
+                    if (distances[edge.from] !== INF && distances[edge.from] + edge.weight < distances[edge.to]) {
+                        const oldDist = distances[edge.to];
+                        distances[edge.to] = distances[edge.from] + edge.weight;
+                        predecessors[edge.to] = edge.from;
+                        relaxedInIteration = true;
+
+                        steps.push({
+                            type: 'relax',
+                            line: 11,
+                            edge: edge,
+                            edgeIdx: edgeIdx,
+                            distances: [...distances],
+                            predecessors: [...predecessors],
+                            oldDistance: oldDist,
+                            newDistance: distances[edge.to],
+                            explanation: `✓ Relaxation! Updated distance to ${NODE_LABELS[edge.to]}: ${oldDist === INF ? '∞' : oldDist} → ${distances[edge.to]} (via ${NODE_LABELS[edge.from]}).`,
+                            highlightNode: edge.to,
+                            nodeColor: '#10b981'
+                        });
+                    }
+                });
+
+                if (!relaxedInIteration) {
+                    steps.push({
+                        type: 'iteration-end',
+                        line: 8,
+                        iteration: i + 1,
+                        distances: [...distances],
+                        predecessors: [...predecessors],
+                        explanation: `Iteration ${i + 1} complete. No edges were relaxed - optimal distances found early!`
+                    });
+                    break;
+                }
+            }
+
+            // Step 4: Check for negative cycles
+            steps.push({
+                type: 'negative-check-start',
+                line: 15,
+                distances: [...distances],
+                predecessors: [...predecessors],
+                explanation: 'Checking for negative weight cycles by attempting to relax all edges one more time...'
+            });
+
+            let negativeCycle = false;
+            graph.edges.forEach((edge, edgeIdx) => {
+                if (distances[edge.from] !== INF && distances[edge.from] + edge.weight < distances[edge.to]) {
+                    negativeCycle = true;
+                    steps.push({
+                        type: 'negative-cycle',
+                        line: 17,
+                        edge: edge,
+                        edgeIdx: edgeIdx,
+                        distances: [...distances],
+                        predecessors: [...predecessors],
+                        explanation: `⚠ Negative cycle detected! Edge ${NODE_LABELS[edge.from]} → ${NODE_LABELS[edge.to]} can still be relaxed, indicating a negative cycle in the graph.`
+                    });
+                }
+            });
+
+            if (!negativeCycle) {
+                steps.push({
+                    type: 'complete',
+                    line: 19,
+                    distances: [...distances],
+                    predecessors: [...predecessors],
+                    explanation: '✓ Algorithm complete! No negative cycles detected. All shortest paths have been found.'
+                });
+            }
+
+            return steps;
+        }
+
+        // =============================================
+        // UI Controllers
+        // =============================================
+        class UIController {
+            constructor() {
+                this.elements = {
+                    graphCanvas: document.getElementById('graphCanvas'),
+                    startBtn: document.getElementById('startBtn'),
+                    pauseBtn: document.getElementById('pauseBtn'),
+                    stepBtn: document.getElementById('stepBtn'),
+                    resetBtn: document.getElementById('resetBtn'),
+                    graphPreset: document.getElementById('graphPreset'),
+                    sourceNode: document.getElementById('sourceNode'),
+                    speedSlider: document.getElementById('speedSlider'),
+                    speedLabel: document.getElementById('speedLabel'),
+                    stepCounter: document.getElementById('stepCounter'),
+                    relaxationCounter: document.getElementById('relaxationCounter'),
+                    iterationCounter: document.getElementById('iterationCounter'),
+                    statusLabel: document.getElementById('statusLabel'),
+                    explanationText: document.getElementById('explanationText'),
+                    distanceTable: document.getElementById('distanceTable'),
+                    pseudocode: document.getElementById('pseudocode')
+                };
+
+                this.visualizer = new GraphVisualizer(this.elements.graphCanvas);
+                this.initializePseudocode();
+                this.attachEventListeners();
+            }
+
+            initializePseudocode() {
+                PSEUDOCODE.forEach((line, idx) => {
+                    const lineDiv = document.createElement('div');
+                    lineDiv.className = 'py-1 px-2 rounded transition-all duration-300';
+                    lineDiv.id = 'code-line-' + idx;
+                    lineDiv.textContent = line;
+                    this.elements.pseudocode.appendChild(lineDiv);
+                });
+            }
+
+            attachEventListeners() {
+                this.elements.startBtn.addEventListener('click', () => this.start());
+                this.elements.pauseBtn.addEventListener('click', () => this.pause());
+                this.elements.stepBtn.addEventListener('click', () => this.step());
+                this.elements.resetBtn.addEventListener('click', () => this.reset());
+                this.elements.graphPreset.addEventListener('change', () => this.loadPreset());
+                this.elements.sourceNode.addEventListener('change', () => this.updateSource());
+                this.elements.speedSlider.addEventListener('input', (e) => {
+                    state.animationSpeed = parseInt(e.target.value);
+                    this.elements.speedLabel.textContent = state.animationSpeed + 'ms';
+                });
+            }
+
+            loadPreset() {
+                const preset = this.elements.graphPreset.value;
+                const graphData = GRAPH_PRESETS[preset];
+                
+                state.graph = {
+                    nodes: graphData.nodes,
+                    edges: graphData.edges
+                };
+
+                // Update source node dropdown
+                this.elements.sourceNode.innerHTML = '';
+                for (let i = 0; i < graphData.nodes; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = `Node ${NODE_LABELS[i]} (${i})`;
+                    this.elements.sourceNode.appendChild(option);
+                }
+
+                state.source = 0;
+                this.reset();
+            }
+
+            updateSource() {
+                state.source = parseInt(this.elements.sourceNode.value);
+                this.reset();
+            }
+
+            start() {
+                if (!state.graph) {
+                    this.loadPreset();
+                }
+
+                if (state.steps.length === 0) {
+                    state.steps = generateBellmanFordSteps(state.graph, state.source);
+                    state.totalIterations = state.graph.nodes - 1;
+                }
+
+                state.isRunning = true;
+                state.isPaused = false;
+                this.updateControls();
+                this.updateStatus('Running');
+                this.runAlgorithm();
+            }
+
+            pause() {
+                state.isPaused = true;
+                state.isRunning = false;
+                this.updateControls();
+                this.updateStatus('Paused');
+            }
+
+            step() {
+                if (!state.graph) {
+                    this.loadPreset();
+                }
+
+                if (state.steps.length === 0) {
+                    state.steps = generateBellmanFordSteps(state.graph, state.source);
+                    state.totalIterations = state.graph.nodes - 1;
+                }
+
+                if (state.currentStep < state.steps.length) {
+                    this.executeStep(state.steps[state.currentStep]);
+                    state.currentStep++;
+                    state.stepCounter++;
+                    this.updateCounters();
+                }
+
+                if (state.currentStep >= state.steps.length) {
+                    this.updateStatus('Complete');
+                    this.elements.stepBtn.disabled = true;
+                }
+            }
+
+            reset() {
+                state.reset();
+                this.visualizer.drawGraph(state.graph);
+                this.updateControls();
+                this.updateCounters();
+                this.updateStatus('Ready');
+                this.updateDistanceTable([]);
+                this.clearPseudocodeHighlight();
+                this.elements.explanationText.innerHTML = 'Click "Start" or "Step" to begin the algorithm visualization.';
+            }
+
+            async runAlgorithm() {
+                while (state.isRunning && state.currentStep < state.steps.length) {
+                    this.executeStep(state.steps[state.currentStep]);
+                    state.currentStep++;
+                    state.stepCounter++;
+                    this.updateCounters();
+
+                    await new Promise(resolve => setTimeout(resolve, state.animationSpeed));
+                }
+
+                if (state.currentStep >= state.steps.length) {
+                    state.isRunning = false;
+                    this.updateStatus('Complete');
+                    this.updateControls();
+                }
+            }
+
+            executeStep(step) {
+                this.highlightPseudocodeLine(step.line);
+                this.updateDistanceTable(step.distances);
+                this.elements.explanationText.innerHTML = step.explanation;
+
+                switch (step.type) {
+                    case 'init':
+                        this.visualizer.highlightNode(step.highlightNode, step.nodeColor);
+                        break;
+
+                    case 'iteration-start':
+                        state.currentIteration = step.iteration;
+                        break;
+
+                    case 'check-edge':
+                        this.visualizer.highlightEdge(step.edgeIdx, 'highlighted-edge');
+                        this.visualizer.highlightNode(step.edge.from, '#fbbf24');
+                        this.visualizer.highlightNode(step.edge.to, '#fbbf24');
+                        break;
+
+                    case 'relax':
+                        this.visualizer.highlightEdge(step.edgeIdx, 'relaxed-edge');
+                        this.visualizer.highlightNode(step.highlightNode, step.nodeColor);
+                        state.relaxationCounter++;
+                        break;
+
+                    case 'negative-cycle':
+                        this.visualizer.highlightEdge(step.edgeIdx, 'negative-cycle-edge');
+                        this.visualizer.highlightNode(step.edge.from, '#ef4444');
+                        this.visualizer.highlightNode(step.edge.to, '#ef4444');
+                        break;
+
+                    case 'complete':
+                        // Highlight all nodes with finite distances in green
+                        step.distances.forEach((dist, idx) => {
+                            if (dist !== INF) {
+                                this.visualizer.highlightNode(idx, '#10b981');
+                            }
+                        });
+                        break;
+                }
+            }
+
+            highlightPseudocodeLine(lineIdx) {
+                // Clear previous highlights
+                this.clearPseudocodeHighlight();
+
+                // Highlight current line
+                const lineElement = document.getElementById('code-line-' + lineIdx);
+                if (lineElement) {
+                    lineElement.classList.add('line-highlight');
+                    lineElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+
+            clearPseudocodeHighlight() {
+                PSEUDOCODE.forEach((_, idx) => {
+                    const lineElement = document.getElementById('code-line-' + idx);
+                    if (lineElement) {
+                        lineElement.classList.remove('line-highlight');
+                    }
+                });
+            }
+
+            updateDistanceTable(distances) {
+                this.elements.distanceTable.innerHTML = '';
+                
+                for (let i = 0; i < distances.length; i++) {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-slate-50 transition-colors';
+                    
+                    const nodeCell = document.createElement('td');
+                    nodeCell.className = 'px-4 py-3 font-semibold text-slate-700';
+                    nodeCell.textContent = `Node ${NODE_LABELS[i]}`;
+                    
+                    const distCell = document.createElement('td');
+                    distCell.className = 'px-4 py-3 code-font font-semibold';
+                    distCell.textContent = distances[i] === INF ? '∞' : distances[i];
+                    distCell.style.color = distances[i] === INF ? '#94a3b8' : (distances[i] < 0 ? '#ef4444' : '#10b981');
+                    
+                    const predCell = document.createElement('td');
+                    predCell.className = 'px-4 py-3 code-font';
+                    predCell.textContent = state.steps[state.currentStep - 1]?.predecessors?.[i] !== null && state.steps[state.currentStep - 1]?.predecessors?.[i] !== undefined 
+                        ? NODE_LABELS[state.steps[state.currentStep - 1].predecessors[i]]
+                        : '-';
+                    
+                    row.appendChild(nodeCell);
+                    row.appendChild(distCell);
+                    row.appendChild(predCell);
+                    this.elements.distanceTable.appendChild(row);
+                }
+            }
+
+            updateControls() {
+                this.elements.startBtn.disabled = state.isRunning;
+                this.elements.pauseBtn.disabled = !state.isRunning;
+                this.elements.stepBtn.disabled = state.isRunning || state.currentStep >= state.steps.length;
+                this.elements.graphPreset.disabled = state.isRunning || state.currentStep > 0;
+                this.elements.sourceNode.disabled = state.isRunning || state.currentStep > 0;
+            }
+
+            updateCounters() {
+                this.elements.stepCounter.textContent = state.stepCounter;
+                this.elements.relaxationCounter.textContent = state.relaxationCounter;
+                this.elements.iterationCounter.textContent = `${state.currentIteration} / ${state.totalIterations}`;
+            }
+
+            updateStatus(status) {
+                this.elements.statusLabel.textContent = status;
+                
+                const colors = {
+                    'Ready': '#64748b',
+                    'Running': '#3b82f6',
+                    'Paused': '#f59e0b',
+                    'Complete': '#10b981'
+                };
+                
+                this.elements.statusLabel.style.color = colors[status] || '#64748b';
+            }
+        }
+
+        // =============================================
+        // Initialize Application
+        // =============================================
+        const ui = new UIController();
+        ui.loadPreset();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (state.graph) {
+                ui.visualizer.drawGraph(state.graph);
+            }
+        });
+    </script>
+</body>
+</html>
