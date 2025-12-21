@@ -1,0 +1,227 @@
+<!-- Team Members: Akshata, Anne, Hasini -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bellman–Ford Algorithm Visualizer</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f2a1d, #1c2e25, #0f2a1d);
+    }
+
+    .glass {
+      background: rgba(236, 230, 210, 0.08);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(236, 230, 210, 0.18);
+    }
+
+    .node {
+      width: 30px;
+      height: 30px;
+      border-radius: 9999px;
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      color: #f5f5dc;
+      background: #2f7d5a;
+      box-shadow: 0 0 8px rgba(47,125,90,0.6);
+    }
+
+    .edge {
+      stroke: #9ca3af;
+      stroke-width: 2;
+    }
+
+    .highlight {
+      background-color: rgba(187, 247, 208, 0.2);
+      border-left: 3px solid #22c55e;
+    }
+  </style>
+</head>
+
+<body class="text-[#f5f5dc] h-screen overflow-hidden">
+
+<div class="h-full flex flex-col p-3 gap-3">
+
+  <!-- Header -->
+  <header class="glass rounded-lg px-4 py-2 flex justify-between items-center">
+    <div>
+      <h1 class="text-lg font-bold text-[#f5f5dc]">Bellman–Ford Algorithm</h1>
+      <p class="text-[11px] text-[#d6d3c4]">Shortest Path Visualization</p>
+    </div>
+    <div class="text-[11px] text-[#d6d3c4]">
+      Time: <span class="text-green-400">O(VE)</span> |
+      Space: <span class="text-emerald-300">O(V)</span>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <div class="flex-1 grid grid-cols-12 gap-3 min-h-0">
+
+    <!-- Graph -->
+    <div class="col-span-8 glass rounded-lg p-3 relative">
+      <svg id="graph" class="absolute inset-0 w-full h-full"></svg>
+      <div id="nodes"></div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-span-4 flex flex-col gap-3 min-h-0">
+
+      <!-- Controls -->
+      <div class="glass rounded-lg p-3">
+        <div class="flex gap-2">
+          <button id="play" class="bg-green-700 hover:bg-green-600 text-xs px-3 py-1 rounded">Play</button>
+          <button id="step" class="bg-emerald-700 hover:bg-emerald-600 text-xs px-3 py-1 rounded">Step</button>
+          <button id="reset" class="bg-stone-600 hover:bg-stone-500 text-xs px-3 py-1 rounded">Reset</button>
+        </div>
+      </div>
+
+      <!-- Explanation -->
+      <div class="glass rounded-lg p-3 text-[11px] h-24 overflow-y-auto">
+        <p id="explanation">Click Play or Step to start Bellman–Ford.</p>
+      </div>
+
+      <!-- Distance Table -->
+      <div class="glass rounded-lg p-3">
+        <h3 class="text-xs font-semibold mb-1">Distance Table</h3>
+        <table class="w-full text-[11px] text-center">
+          <thead class="text-[#e7e3d1]">
+            <tr>
+              <th>Vertex</th>
+              <th>Distance</th>
+            </tr>
+          </thead>
+          <tbody id="distTable"></tbody>
+        </table>
+      </div>
+
+      <!-- Pseudocode -->
+      <div class="glass rounded-lg p-3 flex-1 overflow-y-auto text-[10px]" id="pseudocode"></div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const nodes = ['S','A','B','C','D'];
+const edges = [
+  {u:'S',v:'A',w:4},
+  {u:'S',v:'B',w:5},
+  {u:'A',v:'C',w:-3},
+  {u:'B',v:'C',w:6},
+  {u:'C',v:'D',w:2},
+  {u:'B',v:'D',w:3}
+];
+
+const pos = {
+  S:{x:20,y:50}, A:{x:40,y:20}, B:{x:40,y:80},
+  C:{x:65,y:50}, D:{x:85,y:50}
+};
+
+const pseudocode = [
+  "1. Initialize distances from source",
+  "2. Repeat V-1 times",
+  "3.   Relax all edges",
+  "4. Check for negative cycle"
+];
+
+let dist = {};
+let step = 0;
+let animations = [];
+
+/* ================= RENDER ================= */
+const svg = document.getElementById("graph");
+const nodeDiv = document.getElementById("nodes");
+
+function drawGraph(){
+  svg.innerHTML="";
+  nodeDiv.innerHTML="";
+
+  edges.forEach(e=>{
+    const l = document.createElementNS("http://www.w3.org/2000/svg","line");
+    l.setAttribute("x1",pos[e.u].x+"%");
+    l.setAttribute("y1",pos[e.u].y+"%");
+    l.setAttribute("x2",pos[e.v].x+"%");
+    l.setAttribute("y2",pos[e.v].y+"%");
+    l.classList.add("edge");
+    svg.appendChild(l);
+  });
+
+  nodes.forEach(n=>{
+    const d=document.createElement("div");
+    d.className="node";
+    d.style.left=`${pos[n].x}%`;
+    d.style.top=`${pos[n].y}%`;
+    d.textContent=n;
+    nodeDiv.appendChild(d);
+  });
+}
+
+function renderDistances(){
+  const t=document.getElementById("distTable");
+  t.innerHTML="";
+  nodes.forEach(n=>{
+    t.innerHTML+=`<tr><td>${n}</td><td>${dist[n]===Infinity?'∞':dist[n]}</td></tr>`;
+  });
+}
+
+function renderPseudocode(){
+  document.getElementById("pseudocode").innerHTML =
+    pseudocode.map(l=>`<div>${l}</div>`).join("");
+}
+
+/* ================= ALGORITHM ================= */
+function build(){
+  animations=[];
+  nodes.forEach(n=>dist[n]=Infinity);
+  dist['S']=0;
+
+  for(let i=0;i<nodes.length-1;i++){
+    edges.forEach(e=>{
+      animations.push(()=>{
+        document.getElementById("explanation").textContent =
+          `Relaxing edge ${e.u} → ${e.v}`;
+        if(dist[e.u]+e.w<dist[e.v]){
+          dist[e.v]=dist[e.u]+e.w;
+        }
+        renderDistances();
+      });
+    });
+  }
+}
+
+function nextStep(){
+  if(step<animations.length){
+    animations[step++]();
+  }
+}
+
+document.getElementById("play").onclick=()=>{
+  const interval=setInterval(()=>{
+    if(step>=animations.length) clearInterval(interval);
+    else nextStep();
+  },800);
+};
+
+document.getElementById("step").onclick=nextStep;
+document.getElementById("reset").onclick=()=>{
+  step=0;
+  build();
+  renderDistances();
+};
+
+drawGraph();
+renderPseudocode();
+build();
+renderDistances();
+</script>
+</body>
+</html>
