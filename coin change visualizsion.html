@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Coin Change Algorithm Visualizer</title>
+
+  <!-- Tailwind (UI only) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f172a, #1e1b4b);
+      font-family: system-ui, sans-serif;
+    }
+    .glass {
+      background: rgba(30,41,59,0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(148,163,184,0.2);
+    }
+    .dp-cell {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      font-weight: 600;
+    }
+    .highlight {
+      background: #2563eb;
+      box-shadow: 0 0 8px #2563eb;
+      transform: scale(1.1);
+    }
+    .coin {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg,#fbbf24,#f59e0b);
+      color: #78350f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      box-shadow: 0 0 8px rgba(251,191,36,0.6);
+    }
+    .code-line.active {
+      background: rgba(251,191,36,0.2);
+      border-left: 4px solid #fbbf24;
+      padding-left: 6px;
+    }
+  </style>
+</head>
+
+<body class="h-screen text-slate-200">
+
+<div class="h-full p-4 grid grid-cols-12 gap-4">
+
+  <!-- LEFT -->
+  <div class="col-span-8 flex flex-col gap-4">
+
+    <div class="glass p-4 rounded-lg flex justify-between items-center">
+      <h1 class="text-lg font-bold text-white">Coin Change Algorithm Visualizer</h1>
+      <span class="text-xs text-slate-400">Dynamic Programming</span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div class="glass p-3 rounded-lg">
+        <h3 class="text-xs text-slate-400 mb-2">Available Coins</h3>
+        <div id="coinsView" class="flex gap-2 flex-wrap"></div>
+      </div>
+      <div class="glass p-3 rounded-lg">
+        <h3 class="text-xs text-slate-400 mb-2">Current Step</h3>
+        <p id="explain" class="text-sm">Click Start to begin.</p>
+      </div>
+    </div>
+
+    <div class="glass p-3 rounded-lg flex-1 overflow-auto">
+      <h3 class="text-xs text-slate-400 mb-2">DP Table</h3>
+      <div id="dpTable" class="flex gap-2 flex-wrap"></div>
+    </div>
+
+    <div class="grid grid-cols-4 gap-4">
+      <div class="glass p-3 rounded-lg text-center">
+        <div class="text-xs text-slate-400">Steps</div>
+        <div id="stepCount" class="text-xl font-bold text-blue-400">0</div>
+      </div>
+      <div class="glass p-3 rounded-lg text-center">
+        <div class="text-xs text-slate-400">Time</div>
+        <div class="text-sm font-bold text-purple-400">O(n·m)</div>
+      </div>
+      <div class="glass p-3 rounded-lg text-center">
+        <div class="text-xs text-slate-400">Space</div>
+        <div class="text-sm font-bold text-green-400">O(n)</div>
+      </div>
+      <div class="glass p-3 rounded-lg text-center">
+        <div class="text-xs text-slate-400">Result</div>
+        <div id="result" class="text-xl font-bold text-amber-400">-</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT -->
+  <div class="col-span-4 flex flex-col gap-4">
+
+    <div class="glass p-4 rounded-lg">
+      <h3 class="text-xs text-slate-400 mb-2">Configuration</h3>
+      <label class="text-xs">Target Amount</label>
+      <input id="amount" type="number" value="11"
+        class="w-full p-2 mt-1 mb-2 rounded bg-slate-800 border border-slate-600">
+      <label class="text-xs">Coins (comma separated)</label>
+      <input id="coins" type="text" value="1,2,5"
+        class="w-full p-2 mt-1 rounded bg-slate-800 border border-slate-600">
+      <div class="flex gap-2 mt-3">
+        <button onclick="start()" class="flex-1 bg-emerald-600 p-2 rounded">Start</button>
+        <button onclick="resetAll()" class="flex-1 bg-slate-600 p-2 rounded">Reset</button>
+      </div>
+    </div>
+
+    <div class="glass p-4 rounded-lg">
+      <h3 class="text-xs text-slate-400 mb-2">Controls</h3>
+      <div class="flex gap-2">
+        <button onclick="play()" class="flex-1 bg-blue-600 p-2 rounded">Play</button>
+        <button onclick="stepOnce()" class="flex-1 bg-purple-600 p-2 rounded">Step</button>
+      </div>
+    </div>
+
+    <div class="glass p-4 rounded-lg flex-1 overflow-auto">
+      <h3 class="text-xs text-slate-400 mb-2">Algorithm</h3>
+      <div id="code" class="text-xs font-mono space-y-1"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+let dp=[], steps=[], idx=0, timer=null;
+
+const codeLines = [
+ "function coinChange(coins, amount) {",
+ "  dp[0] = 0",
+ "  for i = 1 to amount",
+ "    for each coin",
+ "      dp[i] = min(dp[i], dp[i-coin] + 1)",
+ "  return dp[amount]",
+ "}"
+];
+
+function renderCode(line){
+  document.getElementById("code").innerHTML =
+    codeLines.map((l,i)=>`<div class="code-line ${i===line?'active':''}">${l}</div>`).join("");
+}
+
+function start(){
+  resetAll();
+  let amount = +document.getElementById("amount").value;
+  let coins = document.getElementById("coins").value.split(",").map(Number);
+  dp = Array(amount+1).fill(Infinity);
+  dp[0]=0;
+  steps=[];
+  for(let i=1;i<=amount;i++){
+    for(let c of coins){
+      if(c<=i){
+        dp[i]=Math.min(dp[i],dp[i-c]+1);
+        steps.push({i,dp:[...dp],text:`Using coin ${c} for amount ${i}`});
+      }
+    }
+  }
+  document.getElementById("result").textContent = dp[amount]===Infinity?"N/A":dp[amount];
+  document.getElementById("coinsView").innerHTML =
+    coins.map(c=>`<div class="coin">${c}</div>`).join("");
+  renderCode(0);
+}
+
+function render(step){
+  document.getElementById("dpTable").innerHTML =
+    step.dp.map((v,i)=>`<div class="dp-cell ${i===step.i?'highlight':''}">${v===Infinity?'∞':v}</div>`).join("");
+  document.getElementById("explain").textContent = step.text;
+  document.getElementById("stepCount").textContent = idx+1;
+  renderCode(4);
+}
+
+function play(){
+  if(timer) return;
+  timer=setInterval(()=>{
+    if(idx>=steps.length){clearInterval(timer);timer=null;return;}
+    render(steps[idx++]);
+  },800);
+}
+
+function stepOnce(){
+  if(idx<steps.length) render(steps[idx++]);
+}
+
+function resetAll(){
+  clearInterval(timer);timer=null;idx=0;
+  document.getElementById("dpTable").innerHTML="";
+  document.getElementById("coinsView").innerHTML="";
+  document.getElementById("explain").textContent="Click Start to begin.";
+  document.getElementById("stepCount").textContent="0";
+  document.getElementById("result").textContent="-";
+  document.getElementById("code").innerHTML="";
+}
+</script>
+
+</body>
+</html>
+s
