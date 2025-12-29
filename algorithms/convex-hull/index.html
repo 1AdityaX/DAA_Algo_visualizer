@@ -1,0 +1,629 @@
+<h2>Convex Hull Algorithm</h2>
+
+<p><strong>Group Members:</strong></p>
+<ul>
+  <li>Nehal Sai Krishna</li>
+  <li>E.Abhinay</li>
+  <li>R.Deviswar</li>
+  <li>V.B.Sai Akhilesh</li>
+</ul>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convex Hull - Divide and Conquer Algorithm Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .code-line {
+            padding: 0.25rem 0.5rem;
+            border-left: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .code-line.active {
+            background-color: #fef3c7;
+            border-left-color: #f59e0b;
+        }
+        .point {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .point:hover {
+            transform: scale(1.2);
+        }
+        .hull-line {
+            stroke-width: 2;
+            fill: none;
+        }
+        canvas {
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            background: #ffffff;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-6">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Convex Hull Visualizer</h1>
+            <p class="text-gray-600">Divide and Conquer Algorithm - Interactive Learning Tool</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Left Panel: Code and Controls -->
+            <div class="space-y-6">
+                <!-- Controls -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">Controls</h2>
+                    <div class="space-y-4">
+                        <div class="flex gap-2">
+                            <button id="generateBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition">
+                                Generate Points
+                            </button>
+                            <button id="clearBtn" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition">
+                                Clear Canvas
+                            </button>
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="playBtn" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition">
+                                ▶ Play
+                            </button>
+                            <button id="pauseBtn" class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-2 px-4 rounded transition" disabled>
+                                ⏸ Pause
+                            </button>
+                            <button id="stepBtn" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded transition">
+                                Step →
+                            </button>
+                            <button id="resetBtn" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded transition">
+                                Reset
+                            </button>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Animation Speed: <span id="speedValue">1000ms</span>
+                            </label>
+                            <input id="speedSlider" type="range" min="200" max="2000" value="1000" step="100" class="w-full">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Number of Points: <span id="pointCountValue">10</span>
+                            </label>
+                            <input id="pointCountSlider" type="range" min="5" max="30" value="10" step="1" class="w-full">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Algorithm Info -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">Algorithm Status</h2>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Step:</span>
+                            <span id="stepCounter" class="font-bold text-blue-600">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Time Complexity:</span>
+                            <span class="font-mono text-green-600">O(n log n)</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Space Complexity:</span>
+                            <span class="font-mono text-green-600">O(n)</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Points:</span>
+                            <span id="pointCount" class="font-bold text-purple-600">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Hull Points:</span>
+                            <span id="hullCount" class="font-bold text-orange-600">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pseudocode -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">Pseudocode</h2>
+                    <div id="pseudocode" class="font-mono text-sm space-y-1 bg-gray-50 p-4 rounded overflow-x-auto">
+                        <div class="code-line" data-line="0">function ConvexHull(points):</div>
+                        <div class="code-line" data-line="1">    if points.length ≤ 3:</div>
+                        <div class="code-line" data-line="2">        return points</div>
+                        <div class="code-line" data-line="3">    </div>
+                        <div class="code-line" data-line="4">    sort points by x-coordinate</div>
+                        <div class="code-line" data-line="5">    </div>
+                        <div class="code-line" data-line="6">    mid = points.length / 2</div>
+                        <div class="code-line" data-line="7">    leftHull = ConvexHull(points[0..mid])</div>
+                        <div class="code-line" data-line="8">    rightHull = ConvexHull(points[mid..n])</div>
+                        <div class="code-line" data-line="9">    </div>
+                        <div class="code-line" data-line="10">    return merge(leftHull, rightHull)</div>
+                    </div>
+                </div>
+
+                <!-- Step Explanation -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">Current Step</h2>
+                    <p id="stepExplanation" class="text-gray-700 leading-relaxed">
+                        Click "Generate Points" to create random points, then "Play" to start the visualization.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right Panel: Visualization -->
+            <div class="space-y-6">
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">Visualization</h2>
+                    <canvas id="canvas" width="600" height="600"></canvas>
+                    <div class="mt-4 flex gap-4 text-sm">
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 bg-blue-500 rounded-full"></div>
+                            <span>Input Points</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 bg-green-500 rounded-full"></div>
+                            <span>Hull Points</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-0.5 bg-red-500"></div>
+                            <span>Hull Edges</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-0.5 bg-purple-300 border-dashed border"></div>
+                            <span>Division</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Algorithm Description -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">About the Algorithm</h2>
+                    <div class="text-gray-700 space-y-3 text-sm leading-relaxed">
+                        <p><strong>Divide and Conquer Approach:</strong></p>
+                        <p>The algorithm recursively divides the point set into two halves, computes the convex hull for each half, and then merges them.</p>
+                        <p><strong>Key Steps:</strong></p>
+                        <ul class="list-disc list-inside space-y-1 ml-2">
+                            <li>Sort points by x-coordinate</li>
+                            <li>Recursively divide into left and right subsets</li>
+                            <li>Compute hull for each subset</li>
+                            <li>Merge the two hulls by finding upper and lower tangents</li>
+                        </ul>
+                        <p><strong>Applications:</strong> Computer graphics, pattern recognition, collision detection, geographic information systems.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let points = [];
+        let hull = [];
+        let steps = [];
+        let currentStep = 0;
+        let isPlaying = false;
+        let animationSpeed = 1000;
+        let playInterval = null;
+
+        // UI Elements
+        const generateBtn = document.getElementById('generateBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const playBtn = document.getElementById('playBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const stepBtn = document.getElementById('stepBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+        const pointCountSlider = document.getElementById('pointCountSlider');
+        const pointCountValue = document.getElementById('pointCountValue');
+        const stepCounter = document.getElementById('stepCounter');
+        const pointCount = document.getElementById('pointCount');
+        const hullCount = document.getElementById('hullCount');
+        const stepExplanation = document.getElementById('stepExplanation');
+
+        // Utility Functions
+        function cross(o, a, b) {
+            return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+        }
+
+        function distance(a, b) {
+            return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+        }
+
+        function generateRandomPoints(count) {
+            points = [];
+            const margin = 50;
+            for (let i = 0; i < count; i++) {
+                points.push({
+                    x: margin + Math.random() * (canvas.width - 2 * margin),
+                    y: margin + Math.random() * (canvas.height - 2 * margin)
+                });
+            }
+            pointCount.textContent = points.length;
+            drawPoints();
+        }
+
+        function drawPoints() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw all points
+            points.forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+                ctx.fillStyle = '#3b82f6';
+                ctx.fill();
+                ctx.strokeStyle = '#1e40af';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+        }
+
+        function drawHull(hullPoints, color = '#ef4444') {
+            if (hullPoints.length < 2) return;
+            
+            ctx.beginPath();
+            ctx.moveTo(hullPoints[0].x, hullPoints[0].y);
+            for (let i = 1; i < hullPoints.length; i++) {
+                ctx.lineTo(hullPoints[i].x, hullPoints[i].y);
+            }
+            ctx.closePath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Draw hull points
+            hullPoints.forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 7, 0, 2 * Math.PI);
+                ctx.fillStyle = '#10b981';
+                ctx.fill();
+                ctx.strokeStyle = '#059669';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+        }
+
+        function drawDivisionLine(x) {
+            ctx.beginPath();
+            ctx.setLineDash([5, 5]);
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, canvas.height);
+            ctx.strokeStyle = '#a855f7';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // Convex Hull Algorithm - Graham Scan based
+        function convexHullGrahamScan(pts) {
+            if (pts.length <= 3) return pts;
+
+            // Sort points by x-coordinate
+            pts.sort((a, b) => a.x - b.x || a.y - b.y);
+
+            // Build lower hull
+            const lower = [];
+            for (let i = 0; i < pts.length; i++) {
+                while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], pts[i]) <= 0) {
+                    lower.pop();
+                }
+                lower.push(pts[i]);
+            }
+
+            // Build upper hull
+            const upper = [];
+            for (let i = pts.length - 1; i >= 0; i--) {
+                while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], pts[i]) <= 0) {
+                    upper.pop();
+                }
+                upper.push(pts[i]);
+            }
+
+            // Remove last point of each half because it's repeated
+            lower.pop();
+            upper.pop();
+
+            return lower.concat(upper);
+        }
+
+        // Generate algorithm steps for visualization
+        function generateSteps() {
+            steps = [];
+            const sortedPoints = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+
+            steps.push({
+                line: 0,
+                explanation: "Starting Convex Hull algorithm with divide and conquer approach.",
+                points: [...points],
+                hull: [],
+                action: 'start'
+            });
+
+            steps.push({
+                line: 4,
+                explanation: "Sorting all points by x-coordinate. This is the first step before dividing.",
+                points: sortedPoints,
+                hull: [],
+                action: 'sort'
+            });
+
+            // Simulate divide and conquer
+            function divideAndConquer(pts, depth = 0) {
+                if (pts.length <= 3) {
+                    steps.push({
+                        line: 2,
+                        explanation: `Base case reached with ${pts.length} point(s). These points form a trivial hull.`,
+                        points: sortedPoints,
+                        hull: pts,
+                        highlight: pts,
+                        action: 'base'
+                    });
+                    return pts;
+                }
+
+                const mid = Math.floor(pts.length / 2);
+                const divX = (pts[mid - 1].x + pts[mid].x) / 2;
+
+                steps.push({
+                    line: 6,
+                    explanation: `Dividing point set at x = ${divX.toFixed(1)}. Left subset has ${mid} points, right has ${pts.length - mid} points.`,
+                    points: sortedPoints,
+                    hull: [],
+                    divisionLine: divX,
+                    action: 'divide'
+                });
+
+                const leftPts = pts.slice(0, mid);
+                const rightPts = pts.slice(mid);
+
+                steps.push({
+                    line: 7,
+                    explanation: "Computing convex hull for LEFT subset...",
+                    points: sortedPoints,
+                    hull: [],
+                    highlight: leftPts,
+                    divisionLine: divX,
+                    action: 'left'
+                });
+
+                const leftHull = convexHullGrahamScan([...leftPts]);
+
+                steps.push({
+                    line: 7,
+                    explanation: `Left hull computed with ${leftHull.length} points.`,
+                    points: sortedPoints,
+                    hull: leftHull,
+                    divisionLine: divX,
+                    action: 'left-complete'
+                });
+
+                steps.push({
+                    line: 8,
+                    explanation: "Computing convex hull for RIGHT subset...",
+                    points: sortedPoints,
+                    hull: leftHull,
+                    highlight: rightPts,
+                    divisionLine: divX,
+                    action: 'right'
+                });
+
+                const rightHull = convexHullGrahamScan([...rightPts]);
+
+                steps.push({
+                    line: 8,
+                    explanation: `Right hull computed with ${rightHull.length} points.`,
+                    points: sortedPoints,
+                    hull: [...leftHull, ...rightHull],
+                    divisionLine: divX,
+                    action: 'right-complete'
+                });
+
+                steps.push({
+                    line: 10,
+                    explanation: "Merging left and right hulls by finding upper and lower tangents...",
+                    points: sortedPoints,
+                    hull: [...leftHull, ...rightHull],
+                    divisionLine: divX,
+                    action: 'merge'
+                });
+
+                const mergedHull = convexHullGrahamScan([...pts]);
+
+                steps.push({
+                    line: 10,
+                    explanation: `Merge complete! Combined hull has ${mergedHull.length} points.`,
+                    points: sortedPoints,
+                    hull: mergedHull,
+                    action: 'merge-complete'
+                });
+
+                return mergedHull;
+            }
+
+            const finalHull = divideAndConquer(sortedPoints);
+
+            steps.push({
+                line: 0,
+                explanation: `Algorithm complete! Final convex hull contains ${finalHull.length} points.`,
+                points: sortedPoints,
+                hull: finalHull,
+                action: 'complete'
+            });
+
+            hull = finalHull;
+            hullCount.textContent = hull.length;
+        }
+
+        function visualizeStep(step) {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw division line if present
+            if (step.divisionLine) {
+                drawDivisionLine(step.divisionLine);
+            }
+
+            // Draw all points
+            step.points.forEach(point => {
+                const isHighlighted = step.highlight && step.highlight.some(p => p.x === point.x && p.y === point.y);
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+                ctx.fillStyle = isHighlighted ? '#f59e0b' : '#3b82f6';
+                ctx.fill();
+                ctx.strokeStyle = isHighlighted ? '#d97706' : '#1e40af';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            // Draw hull
+            if (step.hull && step.hull.length > 0) {
+                drawHull(step.hull);
+            }
+
+            // Update UI
+            stepCounter.textContent = currentStep + 1;
+            stepExplanation.textContent = step.explanation;
+
+            // Highlight code line
+            document.querySelectorAll('.code-line').forEach(line => {
+                line.classList.remove('active');
+            });
+            const activeLine = document.querySelector(`[data-line="${step.line}"]`);
+            if (activeLine) {
+                activeLine.classList.add('active');
+                activeLine.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            // Animate with GSAP
+            gsap.from('.code-line.active', {
+                x: -10,
+                opacity: 0.5,
+                duration: 0.3
+            });
+        }
+
+        function play() {
+            if (steps.length === 0) {
+                alert('Please generate points first!');
+                return;
+            }
+
+            isPlaying = true;
+            playBtn.disabled = true;
+            pauseBtn.disabled = false;
+
+            playInterval = setInterval(() => {
+                if (currentStep < steps.length - 1) {
+                    currentStep++;
+                    visualizeStep(steps[currentStep]);
+                } else {
+                    pause();
+                }
+            }, animationSpeed);
+        }
+
+        function pause() {
+            isPlaying = false;
+            playBtn.disabled = false;
+            pauseBtn.disabled = true;
+            if (playInterval) {
+                clearInterval(playInterval);
+                playInterval = null;
+            }
+        }
+
+        function stepForward() {
+            if (steps.length === 0) {
+                alert('Please generate points first!');
+                return;
+            }
+
+            if (currentStep < steps.length - 1) {
+                currentStep++;
+                visualizeStep(steps[currentStep]);
+            }
+        }
+
+        function reset() {
+            pause();
+            currentStep = 0;
+            if (steps.length > 0) {
+                visualizeStep(steps[0]);
+            }
+        }
+
+        // Event Listeners
+        generateBtn.addEventListener('click', () => {
+            pause();
+            const count = parseInt(pointCountSlider.value);
+            generateRandomPoints(count);
+            generateSteps();
+            currentStep = 0;
+            visualizeStep(steps[0]);
+        });
+
+        clearBtn.addEventListener('click', () => {
+            pause();
+            points = [];
+            hull = [];
+            steps = [];
+            currentStep = 0;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            pointCount.textContent = '0';
+            hullCount.textContent = '0';
+            stepCounter.textContent = '0';
+            stepExplanation.textContent = 'Click "Generate Points" to create random points, then "Play" to start the visualization.';
+            document.querySelectorAll('.code-line').forEach(line => {
+                line.classList.remove('active');
+            });
+        });
+
+        playBtn.addEventListener('click', play);
+        pauseBtn.addEventListener('click', pause);
+        stepBtn.addEventListener('click', stepForward);
+        resetBtn.addEventListener('click', reset);
+
+        speedSlider.addEventListener('input', (e) => {
+            animationSpeed = parseInt(e.target.value);
+            speedValue.textContent = `${animationSpeed}ms`;
+            if (isPlaying) {
+                pause();
+                play();
+            }
+        });
+
+        pointCountSlider.addEventListener('input', (e) => {
+            pointCountValue.textContent = e.target.value;
+        });
+
+        // Allow clicking on canvas to add points
+        canvas.addEventListener('click', (e) => {
+            if (isPlaying) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            points.push({ x, y });
+            pointCount.textContent = points.length;
+            drawPoints();
+            
+            if (points.length >= 3) {
+                generateSteps();
+                currentStep = 0;
+                visualizeStep(steps[0]);
+            }
+        });
+
+        // Initialize
+        generateRandomPoints(10);
+        generateSteps();
+        visualizeStep(steps[0]);
+    </script>
+</body>
+</html>
